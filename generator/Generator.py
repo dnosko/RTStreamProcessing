@@ -6,6 +6,7 @@ import random
 
 
 # TODO pridat typy parametrov
+# TODO config subor do ktoreho vlozit websocket uri...
 
 class Generator:
     # Default values
