@@ -55,4 +55,5 @@ class Generator:
         """ Stops the generator and closes the websocket"""
         self.STOP = True
         if self.websocket:
-            await self.websocket.close()
+            await self.websocket.close(code=1000, reason="Normal closure")
+
