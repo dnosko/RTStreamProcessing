@@ -3,6 +3,7 @@ from typing import Dict
 import websockets
 from datetime import datetime
 import random
+import json
 
 
 # TODO pridat typy parametrov
@@ -13,7 +14,7 @@ class Generator:
     DEVICES = list(range(0, 10, 1))
     LIMIT_X = 100.0
     LIMIT_Y = 100.0
-    URI = "ws://localhost:"
+    URI = "ws://localhost:8001"
 
     STOP = False
 
@@ -37,7 +38,7 @@ class Generator:
         """ Generates random mock data from randomly chosen device, point and current timestamp. """
         data = {"DeviceID": random.choice(self.devices),
                 "Point": (self.choose_point(self.limitX), self.choose_point(self.limitY)),
-                "Timestamp": datetime.now()}
+                "Timestamp": datetime.now().isoformat()}
         return data
 
     async def send_data(self):
@@ -45,7 +46,8 @@ class Generator:
         if self.websocket:
             while not self.STOP:
                 data = self.generate_mock_data()
-                await self.websocket.send(data)
+                data_str = json.dumps(data)
+                await self.websocket.send(data_str)
         else:
             print("Connection not established.")
 

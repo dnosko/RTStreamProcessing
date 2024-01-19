@@ -10,9 +10,9 @@ class Consumer:
 
     async def start_websocket(self):
         self.websocket_server = await websockets.serve(self.accept_msg, self.HOST, self.PORT)
+        print("Websocket started")
 
     async def accept_msg(self, websocket):
-        await websocket.accept()
         try:
             while True:
                 message = await websocket.recv()
@@ -21,12 +21,8 @@ class Consumer:
             await websocket.close()
 
     async def run(self):
-        # might be unneccesary?
-        await asyncio.Future()
+        print("Websocket started")
+        async with websockets.serve(self.accept_msg, self.HOST, self.PORT):
+            await asyncio.Future()  # run forever
 
-    async def stop(self):
-        if self.websocket_server:
-            self.websocket_server.close()
-            await self.websocket_server.wait_closed()
-            print("WebSocket server stopped.")
 

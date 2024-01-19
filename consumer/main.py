@@ -1,18 +1,18 @@
 import asyncio
 
-import Consumer
-import os
+from consumer.Consumer import Consumer
+import sys
+
 
 async def main():
-
     consumer = Consumer()
 
     try:
-        await consumer.start_websocket()
+        await consumer.run()
 
     finally:
-        consumer.stop()
-        os.exit(0)
+        print("WebSocket server stopped.")
+        sys.exit(0)
 
 
 if __name__ == "__main__":

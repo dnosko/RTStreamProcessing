@@ -1,16 +1,17 @@
-import Generator
-import os
-def main():
+from Generator import Generator
+import sys
+import asyncio
+async def main():
 
     generator = Generator()
 
     try:
-        generator.hello()
-        generator.send_data()
+        await generator.hello()
+        await generator.send_data()
     finally:
-        generator.stop()
-        os.exit(0)
+        await generator.stop()
+        asyncio.get_event_loop().stop()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
