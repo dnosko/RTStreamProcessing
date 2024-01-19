@@ -27,7 +27,7 @@ class Generator:
 
     async def hello(self):
         """ Initiates handshake with the websocket server. """
-        self.websocket = await websockets.connect(self.uri)
+        self.websocket = await websockets.connect(self.uri, ping_interval=5, ping_timeout=10)
 
     @staticmethod
     def choose_point(end, start=1.0) -> float:

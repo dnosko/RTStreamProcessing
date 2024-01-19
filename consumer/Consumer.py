@@ -5,6 +5,7 @@ import websockets
 class Consumer:
     HOST = 'localhost'
     PORT = 8001
+    COUNTER = 0
     def __init__(self):
         self.websocket_server = None
 
@@ -16,7 +17,8 @@ class Consumer:
         try:
             while True:
                 message = await websocket.recv()
-                print(message)
+                self.COUNTER += 1
+                print(self.COUNTER)
         finally:
             await websocket.close()
 
