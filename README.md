@@ -3,13 +3,16 @@
 ## Start up
 ### 1. Apache Kafka
 First start Apache Kafka service through docker. \
-I used docker-compose from this project https://github.com/conduktor/kafka-stack-docker-compose and tutorial can be found on this site https://www.conduktor.io/kafka/how-to-start-kafka-using-docker/, but the steps are listed also below: \
+I used docker-compose from this project https://github.com/conduktor/kafka-stack-docker-compose and 
+tutorial can be found on this site https://www.conduktor.io/kafka/how-to-start-kafka-using-docker/, 
+however the steps are listed also below: \
 ``git clone https://github.com/conduktor/kafka-stack-docker-compose.git`` \
 ``cd kafka-stack-docker-compose `` \
+``docker-compose -f zk-single-kafka-single.yml up -d``
 The kafka should be running at localhost:9092
 ##### Set up topics
 ``docker exec -it kafka1 /bin/bash`` \
-``bin/kafka-topics.sh --create --topic new_locations --bootstrap-server localhost:9092``
+``bin/kafka-topics --create --topic new_locations --bootstrap-server localhost:9092``
 
 ## TODO expose ak nie iba localhost
 
