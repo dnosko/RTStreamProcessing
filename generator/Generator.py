@@ -30,7 +30,7 @@ class Generator:
         self.websocket = await websockets.connect(self.uri, ping_interval=5, ping_timeout=10)
 
     @staticmethod
-    def choose_point(end, start=1.0) -> float:
+    def choose_point(end, start=0.0) -> float:
         """ Chooses random point in interval from start to end."""
         return random.uniform(start, end)
 
