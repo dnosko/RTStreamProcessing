@@ -20,9 +20,9 @@ The kafka should be running at localhost:9092
 ``docker-compose -f zk-single-kafka-single.yml stop`` \
 or to remove also containers \
 ``docker-compose -f zk-single-kafka-single.yml down``
-### 2. Consumer
-Start consumer which serves as a websocket server. \
-``python consumer/main.py``
+### 2. Producer
+Start producer which serves as a websocket server. \
+``python producer/main.py``
 ### 2. Generator
 Then start generating data and sending them to websocket server. \
 Generator randomly chooses id of device from array of 1 to X and random x and y points from intervals 0-X, 0-Y and assigns a current timestamp. \

@@ -1,14 +1,14 @@
 import asyncio
 
-from consumer.Consumer import Consumer
+from producer.ServerWS import ServerWS
 import sys
 
 
 async def main():
-    consumer = Consumer()
+    ws = ServerWS()
 
     try:
-        await consumer.run()
+        await ws.run()
 
     finally:
         print("WebSocket server stopped.")

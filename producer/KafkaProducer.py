@@ -1,22 +1,24 @@
+import json
+
 from confluent_kafka import Producer, KafkaException
 
 
 class KafkaProducer:
-    CONFIG = {}
 
     def __init__(self, topic, server, client_id):
         self.topic = topic
         self.server = server
         self.client_id = client_id
-        self.CONFIG = {
+        self.config = {
             'bootstrap.servers': self.server,
             'client.id': self.client_id
         }
-        self.producer = Producer(self.CONFIG)
+        self.producer = Producer(self.config)
 
     def produce_msg(self, msg):
         try:
-            self.producer.produce(self.topic, value=msg)
+            load_msg = json.loads(msg)
+            self.producer.produce(self.topic, value=msg, key=str(load_msg['ID']).encode('utf-8'))
         except KafkaException as e:
             print(f"Failed to produce message: {e}")
 
@@ -25,6 +27,6 @@ class KafkaProducer:
 
     def stop_producing(self):
         self.producer.flush()
-        self.producer.close()
+        #self.producer.close()
 
 

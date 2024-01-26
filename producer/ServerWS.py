@@ -1,8 +1,8 @@
 import asyncio
 import websockets
-from kafka.KafkaProducer import KafkaProducer
+from producer.KafkaProducer import KafkaProducer
 
-class Consumer:
+class ServerWS:
     # toto vsetko tahat z config suboru
     HOST = 'localhost'
     PORT = 8001
