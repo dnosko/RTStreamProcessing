@@ -8,11 +8,17 @@ import java.util.Arrays;
 import java.util.Properties;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPooled;
+
 public class LocationRecorder {
 
     public static void main(final String[] args) throws Exception {
 
         final String topic = "new_locations";
+        JedisPooled jedis = new JedisPooled("localhost", 6379);
+        int cnt = 0;
 
         // Load consumer configuration settings from a local file
         // Reusing the loadConfig method from the ProducerExample class
@@ -33,11 +39,19 @@ public class LocationRecorder {
                 for (ConsumerRecord<String, String> record : records) {
                     String key = record.key();
                     String value = record.value();
-                    System.out.println(
-                            String.format("Consumed event from topic %s: key = %-10s value = %s", topic, key, value));
+                    writeToRTDB(jedis, key, value);
+                    cnt++;
+                    System.out.println(cnt);
+                    /*System.out.println(
+                            String.format("Consumed event from topic %s: key = %-10s value = %s", topic, key, value));*/
                 }
             }
         }
+    }
+
+    static void writeToRTDB(JedisPooled jedis, String key, String value){
+        jedis.set(key, value);
+        System.out.println(jedis.get(key));
     }
 
 
