@@ -26,6 +26,8 @@ class ServerWS:
                     self.producer.flush()
         except websockets.exceptions.ConnectionClosedOK:
             print("Connection closed")
+        except websockets.exceptions.ConnectionClosed:
+            print("Connection closed probably because of disconnection.")
         finally:
             self.producer.stop_producing()
             await websocket.close()

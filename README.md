@@ -12,7 +12,7 @@ however the steps are listed also below: \
 The kafka should be running at localhost:9092
 ##### Set up topics
 ``docker exec -it kafka1 /bin/bash`` \
-``bin/kafka-topics --create --topic new_locations --bootstrap-server localhost:9092``
+``/bin/kafka-topics --create --topic new_locations --bootstrap-server localhost:9092``
 
 ## TODO expose ak nie iba localhost
 

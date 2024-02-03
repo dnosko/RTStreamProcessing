@@ -5,12 +5,19 @@ import org.apache.kafka.clients.consumer.*;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Properties;
+
+import org.apache.kafka.common.KafkaException;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPooled;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class LocationRecorder {
 
@@ -20,8 +27,6 @@ public class LocationRecorder {
         JedisPooled jedis = new JedisPooled("localhost", 6379);
         int cnt = 0;
 
-        // Load consumer configuration settings from a local file
-        // Reusing the loadConfig method from the ProducerExample class
         final Properties props = new Properties();
 
         // Add additional properties.
@@ -31,22 +36,41 @@ public class LocationRecorder {
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
 
+        final Consumer<String, String> consumer = new KafkaConsumer<>(props);
 
-        try (final Consumer<String, String> consumer = new KafkaConsumer<>(props)) {
+
+        try {
             consumer.subscribe(Arrays.asList(topic));
             while (true) {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-                for (ConsumerRecord<String, String> record : records) {
-                    String key = record.key();
-                    String value = record.value();
-                    writeToRTDB(jedis, key, value);
-                    cnt++;
-                    System.out.println(cnt);
-                    /*System.out.println(
-                            String.format("Consumed event from topic %s: key = %-10s value = %s", topic, key, value));*/
+                try {
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+                    for (ConsumerRecord<String, String> record : records) {
+                            // Process the record
+                            String key = record.key();
+                            String value = record.value();
+                            writeToRTDB(jedis, key, value);
+                            cnt++;
+                            System.out.println(cnt);
+
+                    }
+                } catch (KafkaException e) {
+                    System.out.println(e.getCause());
+                    long offset = getOffset(e.getCause().toString());
+                    System.out.println(offset);
+
+                    if (offset != -1) {
+                        int partition = getPartition(e.getCause().toString(), topic);
+                        System.out.println(partition);
+                        TopicPartition partitionToSeek = new TopicPartition(topic, partition);
+                        consumer.seek(partitionToSeek, offset);
+                    }
                 }
             }
         }
+        finally {
+            consumer.close();
+        }
+
     }
 
     static void writeToRTDB(JedisPooled jedis, String key, String value){
@@ -54,5 +78,34 @@ public class LocationRecorder {
         System.out.println(jedis.get(key));
     }
 
+    /* Extract offset of corrupted record. If its a different kind of exception, then returns -1*/
+    static long getOffset(String msg){
+        String patternString = "stored crc" + " = (\\d+)";
+        Pattern pattern = Pattern.compile(patternString);
+        Matcher matcher = pattern.matcher(msg);
+
+        if (matcher.find()) {
+            // return offset value
+            return Long.parseLong(matcher.group(1));
+        } else {
+            // different exception
+            return -1;
+        }
+    }
+
+    /*Extract partition number when throwing corrupted record exception */
+    static int getPartition(String msg, String topicName){
+        String patternString = topicName + "-(\\d+)";
+        Pattern pattern = Pattern.compile(patternString);
+        Matcher matcher = pattern.matcher(msg);
+
+        if (matcher.find()) {
+            // return offset value
+            return Integer.parseInt(matcher.group(1));
+        } else {
+            // different exception
+            return -1;
+        }
+    }
 
 }

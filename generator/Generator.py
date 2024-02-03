@@ -43,13 +43,21 @@ class Generator:
 
     async def send_data(self):
         """ Sends periodically random mock data to websocket server."""
-        if self.websocket:
-            while not self.STOP:
-                data = self.generate_mock_data()
-                data_str = json.dumps(data)
-                await self.websocket.send(data_str)
-        else:
-            print("Connection not established.")
+        try:
+            if self.websocket:
+                while not self.STOP:
+                    data = self.generate_mock_data()
+                    data_str = json.dumps(data)
+                    await self.websocket.send(data_str)
+            else:
+                print("Connection not established.")
+        except websockets.exceptions.ConnectionClosedError:
+            print("Connection stopped")
+            #await self.stop()
+            await self.hello()
+            print("Connection restarted")
+            await self.send_data()
+
 
     async def stop(self):
         """ Stops the generator and closes the websocket"""
