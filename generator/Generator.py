@@ -36,9 +36,9 @@ class Generator:
 
     def generate_mock_data(self) -> Dict:
         """ Generates random mock data from randomly chosen device, point and current timestamp. """
-        data = {"ID": random.choice(self.devices),
-                "Point": (self.choose_point(self.limitX), self.choose_point(self.limitY)),
-                "Timestamp": datetime.now().isoformat()}
+        data = {"id": random.choice(self.devices),
+                "point": {"x": self.choose_point(self.limitX), "y": self.choose_point(self.limitY)},
+                "timestamp": datetime.now().isoformat()}
         return data
 
     async def send_data(self):

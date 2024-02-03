@@ -16,6 +16,10 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPooled;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,7 +29,7 @@ public class LocationRecorder {
 
         final String topic = "new_locations";
         JedisPooled jedis = new JedisPooled("localhost", 6379);
-        int cnt = 0;
+        AtomicInteger cnt = new AtomicInteger(0);
 
         final Properties props = new Properties();
 
@@ -37,10 +41,17 @@ public class LocationRecorder {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
 
         final Consumer<String, String> consumer = new KafkaConsumer<>(props);
-
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
         try {
             consumer.subscribe(Arrays.asList(topic));
+
+            scheduler.scheduleAtFixedRate(() -> {
+                // Perform your action, for example, write to stdout
+                System.out.println(cnt.get());
+                cnt.set(0);
+            }, 0, 1, TimeUnit.MINUTES);
+
             while (true) {
                 try {
                     ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
@@ -49,8 +60,8 @@ public class LocationRecorder {
                             String key = record.key();
                             String value = record.value();
                             writeToRTDB(jedis, key, value);
-                            cnt++;
-                            System.out.println(cnt);
+                            cnt.incrementAndGet();
+                            //System.out.println(cnt);
 
                     }
                 } catch (KafkaException e) {
@@ -70,12 +81,11 @@ public class LocationRecorder {
         finally {
             consumer.close();
         }
-
     }
 
     static void writeToRTDB(JedisPooled jedis, String key, String value){
         jedis.set(key, value);
-        System.out.println(jedis.get(key));
+        //System.out.println(jedis.get(key));
     }
 
     /* Extract offset of corrupted record. If its a different kind of exception, then returns -1*/

@@ -18,7 +18,7 @@ class KafkaProducer:
     def produce_msg(self, msg):
         try:
             load_msg = json.loads(msg)
-            self.producer.produce(self.topic, value=msg, key=str(load_msg['ID']).encode('utf-8'))
+            self.producer.produce(self.topic, value=msg, key=str(load_msg['id']).encode('utf-8'))
         except KafkaException as e:
             print(f"Failed to produce message: {e}")
 
