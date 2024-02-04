@@ -1,9 +1,10 @@
 from typing import Dict
 
 import websockets
-from datetime import datetime
+from datetime import datetime, date, timezone
 import random
 import json
+
 
 
 # TODO pridat typy parametrov
@@ -36,9 +37,12 @@ class Generator:
 
     def generate_mock_data(self) -> Dict:
         """ Generates random mock data from randomly chosen device, point and current timestamp. """
+        timestamp = int(datetime.now(timezone.utc).timestamp() * 1e6)
+
+        print(timestamp)
         data = {"id": random.choice(self.devices),
                 "point": {"x": self.choose_point(self.limitX), "y": self.choose_point(self.limitY)},
-                "timestamp": datetime.now().isoformat()}
+                "timestamp": timestamp}
         return data
 
     async def send_data(self):
