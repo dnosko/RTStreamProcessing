@@ -2,21 +2,39 @@
 
 ## Start up
 ### 1. Apache Kafka
-First start Apache Kafka service through docker. \
-I used docker-compose from this project https://github.com/conduktor/kafka-stack-docker-compose and 
-tutorial can be found on this site https://www.conduktor.io/kafka/how-to-start-kafka-using-docker/, 
-however the steps are listed also below: \
-``git clone https://github.com/conduktor/kafka-stack-docker-compose.git`` \
-``cd kafka-stack-docker-compose `` \
-``docker-compose -f zk-single-kafka-single.yml up -d``
-The kafka should be running at localhost:9092
-##### Set up topics
-``docker exec -it kafka1 /bin/bash`` \
-``/bin/kafka-topics --create --topic new_locations --bootstrap-server localhost:9092``
+First start Apache Kafka and QuestDB through docker. \
+I used docker-compose from this project https://github.com/questdb/kafka-questdb-connector/tree/main/kafka-questdb-connector-samples/confluent-docker-images 
+and fixed it to align with my usecase, it can be found here as docker-compose.yaml. 
+The steps are listed below: \
+``docker compose build`` \
+``docker compose up`` \
+Then go to http://localhost:8080/ui/clusters/kafka/connectors and click create connector. \
+The name should be QuestDB and config is this:
+``{
+	"connector.class": "io.questdb.kafka.QuestDBSinkConnector",
+	"topics": "new_locations",
+	"host": "questdb:9009",
+	"name": "QuestDB",
+	"value.converter.schemas.enable": "false",
+	"value.converter": "org.apache.kafka.connect.json.JsonConverter",
+	"timestamp.field.name": "timestamp",
+	"include.key": "false",
+	"key.converter": "org.apache.kafka.connect.storage.StringConverter",
+	"table": "locations_table"
+}
+``
+More info can be found on QuestDB documentation site: https://questdb.io/docs/third-party-tools/kafka/questdb-kafka/ 
 
+The kafka should be accesible from localhost:9092
+##### Set up topics
+Either: \
+``docker exec -it kafka1 /bin/bash`` \
+``/bin/kafka-topics --create --topic new_locations --bootstrap-server localhost:9092`` 
+or through kafka UI http://localhost:8080/ui/clusters/kafka/all-topics 
 ## TODO expose ak nie iba localhost
 
 #### Stopping the kafka service - TODO mozno este ulozenie dat po stopnuti?????
+#### TODO FIX
 ``docker-compose -f zk-single-kafka-single.yml stop`` \
 or to remove also containers \
 ``docker-compose -f zk-single-kafka-single.yml down``
