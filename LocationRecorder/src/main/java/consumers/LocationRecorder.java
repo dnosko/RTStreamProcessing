@@ -28,13 +28,13 @@ public class LocationRecorder {
     public static void main(final String[] args) throws Exception {
 
         final String topic = "new_locations";
-        JedisPooled jedis = new JedisPooled("localhost", 6379);
+        JedisPooled jedis = new JedisPooled("redis", 6379);
         AtomicInteger cnt = new AtomicInteger(0);
 
         final Properties props = new Properties();
 
         // Add additional properties.
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka1:19092");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "kafka-location-recorder");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
@@ -85,7 +85,7 @@ public class LocationRecorder {
 
     static void writeToRTDB(JedisPooled jedis, String key, String value){
         jedis.set(key, value);
-        //System.out.println(jedis.get(key));
+        System.out.println(jedis.get(key));
     }
 
     /* Extract offset of corrupted record. If its a different kind of exception, then returns -1*/

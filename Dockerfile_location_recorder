@@ -1,0 +1,11 @@
+FROM openjdk:11
+
+WORKDIR /usr/src/app
+
+COPY LocationRecorder/ .
+
+# Compile the Java application
+RUN ./gradlew shadowJar
+
+# Define the command to run the Java application
+CMD ["java", "-jar", "build/libs/location-recorder-0.1.jar", "consumers.LocationRecorder"]
