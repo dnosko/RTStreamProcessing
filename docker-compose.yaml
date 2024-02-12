@@ -54,7 +54,7 @@ services:
   connect:
     image: kafka-connect-with-questdb
     build:
-      dockerfile: ./Dockerfile_connect
+      dockerfile: ./docker/Dockerfile_connect
       context: .
     depends_on:
       - kafka1
@@ -88,7 +88,7 @@ services:
   locationrecorder:
     container_name: "location_recorder"
     build:
-      dockerfile: ./Dockerfile_location_recorder
+      dockerfile: ./docker/Dockerfile_location_recorder
       context: .
     ports:
       - '8081:8081'
@@ -103,3 +103,21 @@ services:
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: "postgis"
+    volumes:
+      - ./postgis_data:/var/lib/postgresql
+      - ./docker/init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
+    environment:
+      - POSTGRES_DB=data
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_MULTIPLE_EXTENSIONS=postgis,hstore,postgis_topology,postgis_raster,pgrouting
+      - RUN_AS_ROOT=true
+    ports:
+        - "25432:5432"
+    restart: on-failure
+    healthcheck:
+        test: "PGPASSWORD=docker pg_isready -h 127.0.0.1 -U docker -d data"
+
