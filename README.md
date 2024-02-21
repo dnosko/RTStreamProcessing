@@ -46,3 +46,7 @@ Then start generating data and sending them to websocket server. \
 Generator randomly chooses id of device from array of 1 to X and random x and y points from intervals 0-X, 0-Y and assigns a current timestamp. \
 List of ids and intervals of X and Y are set in constructor. If not set default values are used. \
 ``python generator/main.py``
+
+### Services
+``uvicorn historical_locations:api --reload `` \
+`` uvicorn rt_locations:api --reload``
