@@ -120,5 +120,5 @@ services:
         - "25432:5432"
     restart: on-failure
     healthcheck:
-        test: "PGPASSWORD=docker pg_isready -h 127.0.0.1 -U docker -d data"
+        test: "pg_isready -U postgres -h localhost -p 25432 -d data"
 
