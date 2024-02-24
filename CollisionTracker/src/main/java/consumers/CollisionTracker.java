@@ -79,24 +79,7 @@ public class CollisionTracker {
 
 
         // create a wkt table
-
-        TypeInformation<?>[] colTypes = {
-                BasicTypeInfo.INT_TYPE_INFO,
-                BasicTypeInfo.STRING_TYPE_INFO,
-                BasicTypeInfo.LONG_TYPE_INFO
-        };
-        RowTypeInfo typeInfo = new RowTypeInfo(colTypes, Arrays.copyOfRange(colNames, 0, 3));
-        DataStream<Row> ds = jsonStream.map(s -> Utils.createPointWKT(s)).returns(typeInfo);
-        // Generate Time Attribute
-        WatermarkStrategy<Row> wmStrategy =
-                WatermarkStrategy
-                        .<Row>forMonotonousTimestamps()
-                        .withTimestampAssigner((event, timestamp) -> event.getFieldAs(2));
-
-        Table pointWktTable = tableEnv.fromDataStream(ds.assignTimestampsAndWatermarks(wmStrategy), $(colNames[0]), $(colNames[1]), $(colNames[2]).rowtime(), $(colNames[3]).proctime());
-
-
-        //Table pointWktTable = Utils.createTable(env, sedona, jsonStream, pointColNames);
+        Table pointWktTable = Utils.createTable(env, sedona, jsonStream, colNames);
         // Create a geometry column
         /*Table locationTable = pointWktTable.select(call(Constructors.ST_GeomFromWKT.class.getSimpleName(),
                         $(colNames[1])).as(colNames[1]),

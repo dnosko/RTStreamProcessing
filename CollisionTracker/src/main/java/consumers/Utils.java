@@ -11,15 +11,14 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import static org.apache.flink.table.api.Expressions.$;
 
-/*** https://github.com/apache/sedona/blob/master/examples/flink-sql/src/main/java/Utils.java#L71/*/
+/*** Based on: https://github.com/apache/sedona/blob/master/examples/flink-sql/src/main/java/Utils.java#L71/*/
 public class Utils {
 
+    /* Creates table from json stream of data and adds processing time timestamps (watermarks) */
     static Table createTable(StreamExecutionEnvironment env, StreamTableEnvironment tableEnv, DataStream<JsonNode> jsonStream, String[] colNames){
         TypeInformation<?>[] colTypes = {
                 BasicTypeInfo.INT_TYPE_INFO,
@@ -36,11 +35,15 @@ public class Utils {
         return tableEnv.fromDataStream(ds.assignTimestampsAndWatermarks(wmStrategy), $(colNames[0]), $(colNames[1]), $(colNames[2]).rowtime(), $(colNames[3]).proctime());
     }
 
+    /* Creates a row in table from JsonNode which has format:
+    * {'id': value, 'point': {'x': value, 'y': value}, 'timestamp:' value}
+    * Converts original timestamp which is in microseconds to milliseconds.
+    * */
     static Row createPointWKT(JsonNode node){
         JsonNode pointNode = node.get("point");
+        Long timestampInMs = node.get("timestamp").asLong() / 1000; // convert from micro to milli seconds
 
-        Row row = Row.of(node.get("id").asInt(), "POINT (" + pointNode.get("x").asDouble() + " " + pointNode.get("y").asDouble() +")", node.get("timestamp").asLong() );
-        System.out.println(row);
+        Row row = Row.of(node.get("id").asInt(), "POINT (" + pointNode.get("x").asDouble() + " " + pointNode.get("y").asDouble() +")", timestampInMs );
         return row;
     }
 
