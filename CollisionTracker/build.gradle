@@ -20,16 +20,24 @@ repositories {
 }
 
 dependencies {
+
+    implementation 'org.apache.flink:flink-clients:1.18.0'
+    //implementation "org.apache.flink:flink-streaming-java:1.18.0"
     implementation 'org.apache.flink:flink-clients:1.18.0'
     implementation 'org.apache.flink:flink-connector-kafka:3.1.0-1.18'
     implementation "org.apache.flink:flink-streaming-java:1.18.0"
     implementation "org.apache.flink:flink-connector-files:1.18.0"
     implementation 'org.slf4j:slf4j-api:1.7.36'
+    //implementation group: 'org.apache.sedona', name: 'sedona-flink-shaded_2.12', version: '1.5.1'
+    implementation group: 'org.apache.sedona', name: 'sedona-flink_2.12', version: '1.5.1'
+    implementation group: 'org.datasyslab', name: 'geotools-wrapper', version: '1.5.1-28.2'
+
 
 
     compileOnly 'org.projectlombok:lombok:1.18.22'
+    implementation group: 'org.apache.flink', name: 'flink-table-api-java-bridge', version: '1.18.0'
 
-
+    implementation group: 'org.apache.flink', name: 'flink-table-planner_2.12', version: '1.18.0'
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
@@ -103,18 +111,4 @@ task fatJar(type: Jar) {
     }
     zip64 true
     with jar
-}
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
-    repositories {
-        maven {
-            name = 'build-repository'
-            url = "file://${buildDir}/mvn-repo"
-        }
-    }
 }

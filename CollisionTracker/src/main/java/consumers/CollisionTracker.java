@@ -8,10 +8,16 @@ import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsIni
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.sedona.flink.SedonaContext;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.Properties;
+
+import static org.apache.flink.table.api.Expressions.$;
 
 @Slf4j
 public class CollisionTracker {
@@ -31,10 +37,13 @@ public class CollisionTracker {
         String topic = config.getProperty("topic");
         String groupID = config.getProperty("group_id");
 
-
+        // set up environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
+        EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
+        StreamTableEnvironment sedona = SedonaContext.create(env, tableEnv);
 
+        // set consuming messages from kafka topic
         KafkaSource<String> source = KafkaSource.<String>builder()
         .setBootstrapServers(kafkaServer)
         .setTopics(topic)
@@ -45,7 +54,15 @@ public class CollisionTracker {
         .build();
 
         DataStreamSource<String> stream = env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source");
+
+        // create table from new location stream
+        Table locations = tableEnv.fromDataStream(stream);
+        tableEnv.createTemporaryView("Locations", locations);
+        Table result = locations.select($("*"));
+        result.printSchema();
+
         stream.print();
+
         env.execute(JOB_NAME);
         /** TODO
          *  1. pripojenie do DB a natiahnut si polygony
