@@ -8,19 +8,37 @@ import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsIni
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import lombok.extern.slf4j.Slf4j;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.util.Properties;
+
 @Slf4j
 public class CollisionTracker {
     static String JOB_NAME = "Collision Tracker";
 
     public static void main(final String[] args) throws  Exception {
 
+        Properties config = new Properties();
+        String fileName = "app.config";
+        try (FileInputStream fis = new FileInputStream(fileName)) {
+            config.load(fis);
+        } catch (FileNotFoundException ex) {
+            System.out.println("Config file not found.");
+        }
+
+        String kafkaServer = config.getProperty("kafka_server");
+        String topic = config.getProperty("topic");
+        String groupID = config.getProperty("group_id");
+
+
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
 
         KafkaSource<String> source = KafkaSource.<String>builder()
-        .setBootstrapServers("localhost:9092")
-        .setTopics("new_locations")
-        .setGroupId("collision-tracker")
+        .setBootstrapServers(kafkaServer)
+        .setTopics(topic)
+        .setGroupId(groupID)
                 .setProperty("partition.discovery.interval.ms", "10000") // Dynamic Partition Discovery for scaling out topics
         .setStartingOffsets(OffsetsInitializer.earliest()) // neskor zmenit na OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)
         .setValueOnlyDeserializer(new SimpleStringSchema())
