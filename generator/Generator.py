@@ -12,9 +12,9 @@ import json
 
 class Generator:
     # Default values
-    DEVICES = list(range(0, 10, 1))
-    LIMIT_X = 100.0
-    LIMIT_Y = 100.0
+    DEVICES = list(range(0, 5000, 1))
+    LIMIT_X = 20000.0
+    LIMIT_Y = 20000.0
     URI = "ws://localhost:8001"
 
     STOP = False
@@ -29,6 +29,7 @@ class Generator:
     async def hello(self):
         """ Initiates handshake with the websocket server. """
         self.websocket = await websockets.connect(self.uri, ping_interval=5, ping_timeout=10)
+        print("Connection started.")
 
     @staticmethod
     def choose_point(end, start=0.0) -> float:
@@ -39,7 +40,6 @@ class Generator:
         """ Generates random mock data from randomly chosen device, point and current timestamp. """
         timestamp = int(datetime.now(timezone.utc).timestamp() * 1e6)
 
-        print(timestamp)
         data = {"id": random.choice(self.devices),
                 "point": {"x": self.choose_point(self.limitX), "y": self.choose_point(self.limitY)},
                 "timestamp": timestamp}

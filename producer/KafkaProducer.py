@@ -22,7 +22,7 @@ class KafkaProducer:
         except KafkaException as e:
             print(f"Failed to produce message: {e}")
 
-    def flush(self, timeout=5.0):
+    def flush(self, timeout=10.0):
         self.producer.flush(timeout=timeout)
 
     def stop_producing(self):
