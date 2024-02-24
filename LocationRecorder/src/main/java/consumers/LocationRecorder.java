@@ -3,6 +3,8 @@ package consumers;
 
 import org.apache.kafka.clients.consumer.*;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,6 +18,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPooled;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -27,27 +30,44 @@ public class LocationRecorder {
 
     public static void main(final String[] args) throws Exception {
 
-        final String topic = "new_locations";
-        JedisPooled jedis = new JedisPooled("redis", 6379);
-        AtomicInteger cnt = new AtomicInteger(0);
+        Properties config = new Properties();
+        String fileName = "app.config";
+        try (FileInputStream fis = new FileInputStream(fileName)) {
+            config.load(fis);
+        } catch (FileNotFoundException ex) {
+                System.out.println("Config file not found.");
+        }
 
-        final Properties props = new Properties();
+        /************************ Config ***************************/
+
+        String redisHost = config.getProperty("redis_host");
+        int redisPort = Integer.parseInt(config.getProperty("redis_port"));
+        String kafkaServer = config.getProperty("kafka_server");
+        String kafkaGroup = config.getProperty("group_id_config");
+        String topic = config.getProperty("topic_name");
+
+        final Properties consumer_props = new Properties();
 
         // Add additional properties.
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka1:19092");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "kafka-location-recorder");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        consumer_props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServer);
+        consumer_props.put(ConsumerConfig.GROUP_ID_CONFIG, kafkaGroup);
+        consumer_props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        consumer_props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        consumer_props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
 
-        final Consumer<String, String> consumer = new KafkaConsumer<>(props);
+        /**********************************************************/
+
+        JedisPooled jedis = new JedisPooled(redisHost, redisPort ); // redis
+        AtomicInteger cnt = new AtomicInteger(0);
+
+        final Consumer<String, String> consumer = new KafkaConsumer<>(consumer_props);
+
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
         try {
             consumer.subscribe(Arrays.asList(topic));
 
             scheduler.scheduleAtFixedRate(() -> {
-                // Perform your action, for example, write to stdout
                 System.out.println(cnt.get());
                 cnt.set(0);
             }, 0, 1, TimeUnit.MINUTES);
@@ -61,8 +81,6 @@ public class LocationRecorder {
                             String value = record.value();
                             writeToRTDB(jedis, key, value);
                             cnt.incrementAndGet();
-                            //System.out.println(cnt);
-
                     }
                 } catch (KafkaException e) {
                     System.out.println(e.getCause());
@@ -85,7 +103,6 @@ public class LocationRecorder {
 
     static void writeToRTDB(JedisPooled jedis, String key, String value){
         jedis.set(key, value);
-        System.out.println(jedis.get(key));
     }
 
     /* Extract offset of corrupted record. If its a different kind of exception, then returns -1*/
