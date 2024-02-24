@@ -1,46 +1,42 @@
 package consumers;
 
-import org.apache.flink.api.common.RuntimeExecutionMode;
-import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.descriptors.Schema;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.types.Row;
 import org.apache.sedona.flink.SedonaContext;
-import org.apache.sedona.flink.expressions.Constructors;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.Arrays;
-import java.util.Date;
+import java.sql.*;
 import java.util.Properties;
 
-import static org.apache.flink.table.api.Expressions.$;
+import static consumers.Utils.resultSetToCollection;
 import static org.apache.flink.table.api.Expressions.call;
 
 @Slf4j
 public class CollisionTracker {
     static String JOB_NAME = "Collision Tracker";
     public static final int CHECKPOINTING_INTERVAL_MS = 5000;
+    static final int ERR_DB = -2;
+    static final String polygonsTable = "polygons";
+    static final String inputTopic = "new_locations";
+
+    static String[] locationColNames = {"id_device", "geom_point", "timestamp", "processing_time"};
+    static String[] polygonColNames = {"id_polygon","geom_polygon", "valid", "creation"};
 
     public static void main(final String[] args) throws  Exception {
+
+        /************************************ SETUP ********************************************/
 
         Properties config = new Properties();
         String fileName = "app.config";
@@ -51,10 +47,13 @@ public class CollisionTracker {
         }
 
         String kafkaServer = config.getProperty("kafka_server");
-        String topic = config.getProperty("topic");
         String groupID = config.getProperty("group_id");
+        String db_conn_string = config.getProperty("postgres_connection_string");
+        String db_username = config.getProperty("postgres_username");
+        String db_password = config.getProperty("postgres_password");
 
-        // set up environment
+
+        // set up flink's stream environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.enableCheckpointing(CHECKPOINTING_INTERVAL_MS);
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
@@ -64,67 +63,51 @@ public class CollisionTracker {
         // set consuming messages from kafka topic
         KafkaSource<String> source = KafkaSource.<String>builder()
         .setBootstrapServers(kafkaServer)
-        .setTopics(topic)
+        .setTopics(inputTopic)
         .setGroupId(groupID)
         .setProperty("partition.discovery.interval.ms", "10000") // Dynamic Partition Discovery for scaling out topics
         .setStartingOffsets(OffsetsInitializer.earliest()) // neskor zmenit na OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)
         .setValueOnlyDeserializer(new SimpleStringSchema())
         .build();
 
+        /**************************************************************************************/
+
         // create stream
         DataStreamSource<String> stream = env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source");
         DataStream<JsonNode> jsonStream = stream.map(CollisionTracker::mapToJson);
 
-        String[] colNames = {"id", "geom_point", "timestamp", "processing_time"};
-
-
         // create a wkt table
-        Table pointWktTable = Utils.createTable(env, sedona, jsonStream, colNames);
-        // Create a geometry column
-        /*Table locationTable = pointWktTable.select(call(Constructors.ST_GeomFromWKT.class.getSimpleName(),
-                        $(colNames[1])).as(colNames[1]),
-                $(colNames[0]));*/
+        Table locationWktTable = Utils.createLocationsTable( sedona, jsonStream, locationColNames);
 
-        tableEnv.createTemporaryView("locationTable", pointWktTable);
-        pointWktTable = tableEnv.sqlQuery("SELECT * FROM locationTable");
-        pointWktTable.execute().print();
+        sedona.createTemporaryView("locationTable", locationWktTable);
+        // TODO zmenit na sedona namiesto tableEnv
+        Table locationsTable = tableEnv.sqlQuery("SELECT * FROM locationTable");
+        //locationsTable.execute().print();
 
 
+        try {
+            Connection conn_db = DriverManager.getConnection(db_conn_string, "postgres", "password");
+            //log.info("Connected to the database");
+            String query = "SELECT id, creation, valid, ST_AsText(fence) as geo_fence FROM " + polygonsTable;
+            try (Statement statement = conn_db.createStatement();
+                 ResultSet resultSet = statement.executeQuery(query)) {
 
-        // create table from new location stream
-        // TODO najprv namapovat milisekundy na stringovy datetime a ulozit ako timestamp?
-        /*TableResult locations = tableEnv.executeSql(
-                "CREATE TABLE locations " +
-                        "(`id` BIGINT," +
-                        "`x` DOUBLE," +
-                        "`y` DOUBLE," +
-                        "`ts` TIMESTAMP_LTZ(3) METADATA FROM 'timestamp'" +
-                        ") WITH (" +
-                        "'connector' = 'kafka'," +
-                        "'topic' = 'new_locations'," +
-                        "'properties.bootstrap.servers' = 'localhost:9092'," +
-                        "'properties.group.id' = 'testGroup',"+
-                        "'scan.startup.mode' = 'earliest-offset'," +
-                        "'format' = 'json'," +
-                        "'json.ignore-parse-errors' = 'true'," +
-                        "'key.fields' = 'id'," +
-                        "'key.format' = 'json'," +
-                        "'value.fields-include' = 'ALL')" // Since the value format is configured with 'value.fields-include' = 'ALL', key fields will also end up in the value format’s data type
-        );*/
+                Table polygonsWktTable = Utils.createPolygonsTable( env, sedona, resultSetToCollection(resultSet), polygonColNames);
 
-
-        //Table locations = tableEnv.fromDataStream(jsonStream).as();
-        //tableEnv.createTemporaryView("locations", locations);
-
-        //Table result = locations.select($("*"));
-        //resultStream.print();
-        //Table resultTable = tableEnv.sqlQuery("SELECT * FROM locations;");
-
-        //resultTable.printSchema();
-
-
-
-        //jsonStream.print();
+                sedona.createTemporaryView("polygonsTable", polygonsWktTable);
+                Table polygonsTable = sedona.sqlQuery("SELECT geom_polygon, id_polygon, valid,creation  FROM polygonsTable");
+                polygonsTable.execute().print();
+            } catch (SQLException e) {
+                //log.error("Error executing SQL query: {}", e.getMessage());
+                System.out.println(e.getMessage());
+            }
+        }
+        catch (SQLException e) {
+            //log.error("Failed to connect to the database: {}", e.getMessage());
+            e.printStackTrace();
+            System.out.println(e.getMessage());
+            System.exit(ERR_DB);
+        }
 
         env.execute(JOB_NAME);
         /** TODO
