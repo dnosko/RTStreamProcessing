@@ -5,6 +5,7 @@ import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
@@ -18,8 +19,9 @@ import static org.apache.flink.table.api.Expressions.call;
 
 public class LocationsTableFactory implements TableFactory<DataStream<JsonNode>,JsonNode> {
 
-    /* Creates table from json stream of data and adds processing time timestamps (watermarks) */
-    /*** Based on: https://github.com/apache/sedona/blob/master/examples/flink-sql/src/main/java/Utils.java#L71/*/
+    /** Creates table from json stream of data and adds processing time timestamps (watermarks)
+     * Based on: https://github.com/apache/sedona/blob/master/examples/flink-sql/src/main/java/Utils.java#L71/
+     * */
     @Override
     public Table createTable(StreamTableEnvironment tableEnv, DataStream<JsonNode> data, String[] colNames) {
         TypeInformation<?>[] colTypes = {
@@ -38,6 +40,9 @@ public class LocationsTableFactory implements TableFactory<DataStream<JsonNode>,
         return tableEnv.fromDataStream(ds.assignTimestampsAndWatermarks(wmStrategy), $(colNames[0]), $(colNames[1]), $(colNames[2]).rowtime(), $(colNames[3]).proctime());
     }
 
+    /** Creates Geometry column for point
+     *  Selects all columns from the original table.
+     * */
     @Override
     public Table createGeometryTable(String[] colNames, Table sourceTable) {
         return sourceTable.select(
@@ -48,7 +53,7 @@ public class LocationsTableFactory implements TableFactory<DataStream<JsonNode>,
         );
     }
 
-    /* Creates a row in table from JsonNode which has format:
+    /** Creates a row in table from JsonNode which has format:
      * {'id': value, 'point': {'x': value, 'y': value}, 'timestamp:' value}
      * Converts original timestamp which is in microseconds to milliseconds.
      * */

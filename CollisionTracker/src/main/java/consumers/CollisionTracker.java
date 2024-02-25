@@ -13,14 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.types.Row;
+
 import org.apache.sedona.flink.SedonaContext;
 import org.apache.sedona.flink.expressions.Functions;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.sql.*;
-import java.util.List;
+
 import java.util.Properties;
 
 import static org.apache.flink.table.api.Expressions.*;
@@ -53,6 +53,8 @@ public class CollisionTracker {
         String db_conn_string = config.getProperty("postgres_connection_string");
         String db_username = config.getProperty("postgres_username");
         String db_password = config.getProperty("postgres_password");
+        Properties databaseProps = setDatabaseProperties(db_conn_string, db_username, db_password, polygonsTable);
+
 
 
         // set up flink's stream environment
@@ -78,6 +80,10 @@ public class CollisionTracker {
         DataStreamSource<String> stream = env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source");
         DataStream<JsonNode> jsonStream = stream.map(CollisionTracker::mapToJson);
 
+        // create factories
+        TableFactory<DataStream<JsonNode>, JsonNode> locationsFactory = new LocationsTableFactory();
+        TableFactory<Properties, Polygon> polygonsFactory = new PolygonsTableFactory();
+
         try {
             Connection conn_db = DriverManager.getConnection(db_conn_string, db_username, db_password);
             //log.info("Connected to the database");
@@ -85,40 +91,7 @@ public class CollisionTracker {
             try (Statement statement = conn_db.createStatement();
                  ResultSet resultSet = statement.executeQuery(query)) {
 
-                TableFactory<DataStream<JsonNode>, JsonNode> locationsFactory = new LocationsTableFactory();
-                TableFactory<ResultSet, Polygon> polygonsFactory = new PolygonsTableFactory();
-
                 // create tables for polygons and incoming locations
-                Table polygonsWktTable = polygonsFactory.createTable(sedona, resultSet, polygonColNames);
-                Table locationWktTable = locationsFactory.createTable(sedona, jsonStream, locationColNames);
-
-                try {
-
-                    Table locationsTable = locationsFactory.createGeometryTable(locationColNames, locationWktTable);
-                    Table polygonsTable = polygonsFactory.createGeometryTable(polygonColNames, polygonsWktTable);
-
-                    sedona.createTemporaryView("polygonTable", polygonsTable);
-                    sedona.createTemporaryView("locationTable", locationsTable);
-
-                    Table joined = sedona.sqlQuery(
-                            "SELECT * FROM locationTable, polygonTable"
-                    );
-                    //joined.printSchema();
-
-                    Table result = joined
-                            .select($("*"),call("ST_Contains", $(polygonColNames[1]), $(locationColNames[1])).as("contains"));
-
-                    result = result.select($("contains"),
-                            call(new Functions.ST_AsText(), $(polygonColNames[1])).as(polygonColNames[1]),
-                            call(new Functions.ST_AsText(), $(locationColNames[1])).as(locationColNames[1]),
-                            $(polygonColNames[0]), $(locationColNames[0]), $(locationColNames[2])).where($("contains").isTrue());
-
-                    result.execute().print();
-
-
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
             } catch (SQLException e) {
                 //log.error("Error executing SQL query: {}", e.getMessage());
                 System.out.println(e.getMessage());
@@ -129,6 +102,36 @@ public class CollisionTracker {
             e.printStackTrace();
             System.out.println(e.getMessage());
             System.exit(ERR_DB);
+        }
+
+        Table polygonsWktTable = polygonsFactory.createTable(sedona, databaseProps, polygonColNames);
+        Table locationWktTable = locationsFactory.createTable(sedona, jsonStream, locationColNames);
+
+        try {
+
+            Table locationsTable = locationsFactory.createGeometryTable(locationColNames, locationWktTable);
+            Table polygonsTable = polygonsFactory.createGeometryTable(polygonColNames, polygonsWktTable);
+
+            sedona.createTemporaryView("polygonTable", polygonsTable);
+            sedona.createTemporaryView("locationTable", locationsTable);
+
+            Table joined = sedona.sqlQuery(
+                    "SELECT * FROM locationTable, polygonTable"
+            );
+
+            Table result = joined
+                    .select($("*"),call("ST_Contains", $(polygonColNames[1]), $(locationColNames[1])).as("contains"));
+
+            result = result.select($("contains"),
+                    call(new Functions.ST_AsText(), $(polygonColNames[1])).as(polygonColNames[1]),
+                    call(new Functions.ST_AsText(), $(locationColNames[1])).as(locationColNames[1]),
+                    $(polygonColNames[0]), $(locationColNames[0]), $(locationColNames[2])).where($("contains").isTrue());
+
+            result.execute().print();
+
+
+        }catch (Exception e){
+            e.printStackTrace();
         }
 
         env.execute(JOB_NAME);
@@ -146,6 +149,16 @@ public class CollisionTracker {
         // 4. vyegenerovat prislusnnu udalost do topicu
     }
 
+    private static Properties setDatabaseProperties(String conn_str, String username, String password, String table){
+        Properties props = new Properties();
+        props.setProperty("url",conn_str );
+        props.setProperty("username", username);
+        props.setProperty("password",password);
+        props.setProperty("table",table);
+        return props;
+    }
+
+    /** Map function to convert String to Json */
     private static JsonNode mapToJson(String jsonString) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
