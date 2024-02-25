@@ -1,13 +1,12 @@
 package consumers;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
-public class PolygonOutEvent extends PolygonOutputEvent{
+public class PolygonLeaveEvent extends PolygonOutputEvent{
     public String collision_point_out;
     public LocalDateTime collision_date_out;
 
-    public PolygonOutEvent(int polygon, int device, boolean in, String collision_point_out, LocalDateTime collision_date_out){
+    public PolygonLeaveEvent(int polygon, int device, boolean in, String collision_point_out, LocalDateTime collision_date_out){
         super(polygon,device,in);
         this.collision_point_out = collision_point_out;
         this.collision_date_out = collision_date_out;
