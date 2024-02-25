@@ -12,12 +12,13 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
 import org.apache.sedona.flink.expressions.Constructors;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.call;
 
-public class LocationsTableFactory implements TableFactory<DataStream<JsonNode>,JsonNode> {
+public class LocationsTableFactory implements TableFactory<DataStream<JsonNode>,JsonNode>, Serializable {
 
     /** Creates table from json stream of data and adds processing time timestamps (watermarks)
      * Based on: https://github.com/apache/sedona/blob/master/examples/flink-sql/src/main/java/Utils.java#L71/

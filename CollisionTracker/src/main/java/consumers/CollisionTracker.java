@@ -10,10 +10,12 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.flink.streaming.connectors.kafka.table.KafkaConnectorOptions;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 
+import org.apache.flink.types.Row;
 import org.apache.sedona.flink.SedonaContext;
 import org.apache.sedona.flink.expressions.Functions;
 
@@ -64,7 +66,8 @@ public class CollisionTracker {
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
         StreamTableEnvironment sedona = SedonaContext.create(env, tableEnv);
 
-        // set consuming messages from kafka topic
+        // TODO prerobit na priamo tabulka z kafka? skusit..
+        // https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/overview/
         KafkaSource<String> source = KafkaSource.<String>builder()
         .setBootstrapServers(kafkaServer)
         .setTopics(inputTopic)
@@ -96,24 +99,34 @@ public class CollisionTracker {
             sedona.createTemporaryView("polygonTable", polygonsTable);
             sedona.createTemporaryView("locationTable", locationsTable);
 
+            //Table result = polygonsTable.select(call(new Functions.ST_AsText(), $(polygonColNames[1])).as(polygonColNames[1]), $(polygonColNames[0]));
+            //Table result = locationsTable.select(call(new Functions.ST_AsText(), $(locationColNames[1])).as(locationColNames[1]), $(locationColNames[0]));
+            //result.execute().print();
+
             Table joined = sedona.sqlQuery(
-                    "SELECT * FROM locationTable, polygonTable"
+                    "SELECT * FROM locationTable, polygonTable WHERE ST_Contains(" + polygonColNames[1] + "," + locationColNames[1] +")"
             );
 
-            Table result = joined
+            /*Table result = joined
                     .select($("*"),call("ST_Contains", $(polygonColNames[1]), $(locationColNames[1])).as("contains"));
 
             result = result.select($("contains"),
                     call(new Functions.ST_AsText(), $(polygonColNames[1])).as(polygonColNames[1]),
                     call(new Functions.ST_AsText(), $(locationColNames[1])).as(locationColNames[1]),
-                    $(polygonColNames[0]), $(locationColNames[0]), $(locationColNames[2])).where($("contains").isTrue());
+                    $(polygonColNames[0]), $(locationColNames[0]), $(locationColNames[2])).where($("contains").isTrue());*/
+            Table result = joined.select(call(new Functions.ST_AsText(), $(polygonColNames[1])).as(polygonColNames[1]),
+                    call(new Functions.ST_AsText(), $(locationColNames[1])).as(locationColNames[1]),
+                    $(polygonColNames[0]), $(locationColNames[0]), $(locationColNames[2]));
 
-            result.execute().print();
+            //result.execute().print();
+            DataStream<Row> resultStream = tableEnv.toDataStream(result);
+            resultStream.print();
 
 
         }catch (Exception e){
             e.printStackTrace();
         }
+
 
         env.execute(JOB_NAME);
         /** TODO
