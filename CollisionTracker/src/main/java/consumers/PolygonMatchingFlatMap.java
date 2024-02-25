@@ -48,6 +48,8 @@ public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutp
         // copy the old list to a new one
         for (Integer v : currentlyInPolygons) {
             currentList.add(v);
+            //TODO pridava to asi duplicitne do zoznamu hodnoty
+            System.out.println(deviceID + ":" + v);
         }
 
 
@@ -64,6 +66,7 @@ public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutp
             currentList.add(polygonID);
             outEvent = new PolygonInEvent(polygonID, deviceID, true, point, timestamp);
         }
+        inPolygons.clear();
         inPolygons.addAll(currentList);
 
         if (outEvent != null)

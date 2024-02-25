@@ -114,7 +114,7 @@ public class CollisionTracker {
 
             // it's enough to keep only id of polygon at this point, the geometry isn't needed anymore, for locations all columns are needed
             Table dropPolygonCol = joined.dropColumns($(polygonColNames[1]));
-            dropPolygonCol.printSchema();
+            //dropPolygonCol.printSchema();
             DataStream<Row> resultStream = sedona.toDataStream(dropPolygonCol);
             //resultStream.print();
             // group stream by device_id,
