@@ -103,23 +103,17 @@ public class CollisionTracker {
             //Table result = locationsTable.select(call(new Functions.ST_AsText(), $(locationColNames[1])).as(locationColNames[1]), $(locationColNames[0]));
             //result.execute().print();
 
-            Table joined = sedona.sqlQuery(
-                    "SELECT * FROM locationTable, polygonTable WHERE ST_Contains(" + polygonColNames[1] + "," + locationColNames[1] +")"
-            );
 
-            /*Table result = joined
-                    .select($("*"),call("ST_Contains", $(polygonColNames[1]), $(locationColNames[1])).as("contains"));
+            Table joined = sedona.sqlQuery("SELECT *, " +
+                    "ST_Contains(" + polygonColNames[1] + "," + locationColNames[1] +")"+
+                    "FROM locationTable, polygonTable");
+            
+            // its enough to keep only id of polygon after this, for locations all columns are needed
+            Table dropPolygonCol = joined.dropColumns($(polygonColNames[1]));
 
-            result = result.select($("contains"),
-                    call(new Functions.ST_AsText(), $(polygonColNames[1])).as(polygonColNames[1]),
-                    call(new Functions.ST_AsText(), $(locationColNames[1])).as(locationColNames[1]),
-                    $(polygonColNames[0]), $(locationColNames[0]), $(locationColNames[2])).where($("contains").isTrue());*/
-            Table result = joined.select(call(new Functions.ST_AsText(), $(polygonColNames[1])).as(polygonColNames[1]),
-                    call(new Functions.ST_AsText(), $(locationColNames[1])).as(locationColNames[1]),
-                    $(polygonColNames[0]), $(locationColNames[0]), $(locationColNames[2]));
 
             //result.execute().print();
-            DataStream<Row> resultStream = tableEnv.toDataStream(result);
+            DataStream<Row> resultStream = tableEnv.toDataStream(dropPolygonCol);
             resultStream.print();
 
 
@@ -130,7 +124,8 @@ public class CollisionTracker {
 
         env.execute(JOB_NAME);
         /** TODO
-         *
+         *  2. Zobrat stream dat zgrupit podla kluca zariadenia  a udrziavat si nejaku celkovu stavovu pamat,
+         *      ze ci je alebo nie je vpolygone ( posledny stlpec => contains).
          *  3. zaznamenat tento vypocet do stavovej pamate (podla klucu?) alebo mozno normalne
          *  4. porovnat to s predchadzajucim a na zaklade toho vygenerovat udalost a sink do dvoch topikov v kafka.
          */
