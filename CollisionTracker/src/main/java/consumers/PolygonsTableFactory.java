@@ -18,7 +18,7 @@ import static org.apache.flink.table.api.Expressions.*;
 
 public class PolygonsTableFactory implements TableFactory<Properties, Polygon> {
 
-    /** Creates table from database results.
+    /** Creates flink table of polygons retrieved from database.
     * id_polygon = int
     * geom_polygon = string (wkt format)
     * valid = boolean (whether polygon is valid)

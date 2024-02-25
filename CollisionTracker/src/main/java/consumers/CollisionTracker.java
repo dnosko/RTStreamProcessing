@@ -85,30 +85,11 @@ public class CollisionTracker {
         TableFactory<Properties, Polygon> polygonsFactory = new PolygonsTableFactory();
 
         try {
-            Connection conn_db = DriverManager.getConnection(db_conn_string, db_username, db_password);
-            //log.info("Connected to the database");
-            String query = "SELECT id, creation, valid, ST_AsText(fence) as geo_fence FROM " + polygonsTable;
-            try (Statement statement = conn_db.createStatement();
-                 ResultSet resultSet = statement.executeQuery(query)) {
+            // initialize tables
+            Table polygonsWktTable = polygonsFactory.createTable(sedona, databaseProps, polygonColNames);
+            Table locationWktTable = locationsFactory.createTable(sedona, jsonStream, locationColNames);
 
-                // create tables for polygons and incoming locations
-            } catch (SQLException e) {
-                //log.error("Error executing SQL query: {}", e.getMessage());
-                System.out.println(e.getMessage());
-            }
-        }
-        catch (SQLException e) {
-            //log.error("Failed to connect to the database: {}", e.getMessage());
-            e.printStackTrace();
-            System.out.println(e.getMessage());
-            System.exit(ERR_DB);
-        }
-
-        Table polygonsWktTable = polygonsFactory.createTable(sedona, databaseProps, polygonColNames);
-        Table locationWktTable = locationsFactory.createTable(sedona, jsonStream, locationColNames);
-
-        try {
-
+            // create tables with geometry columns
             Table locationsTable = locationsFactory.createGeometryTable(locationColNames, locationWktTable);
             Table polygonsTable = polygonsFactory.createGeometryTable(polygonColNames, polygonsWktTable);
 
