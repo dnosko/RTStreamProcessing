@@ -7,10 +7,12 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
+import org.apache.sedona.common.Constructors;
+import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.io.ParseException;
 
 import java.sql.ResultSet;
@@ -28,6 +30,7 @@ public class Utils {
         TypeInformation<?>[] colTypes = {
                 BasicTypeInfo.INT_TYPE_INFO,
                 BasicTypeInfo.STRING_TYPE_INFO,
+                //TypeInformation.of(Geometry.class),
                 BasicTypeInfo.LONG_TYPE_INFO
         };
         RowTypeInfo typeInfo = new RowTypeInfo(colTypes, Arrays.copyOfRange(colNames, 0, 3));
@@ -40,18 +43,18 @@ public class Utils {
         return tableEnv.fromDataStream(ds.assignTimestampsAndWatermarks(wmStrategy), $(colNames[0]), $(colNames[1]), $(colNames[2]).rowtime(), $(colNames[3]).proctime());
     }
 
-    static Table createPolygonsTable(StreamExecutionEnvironment env, StreamTableEnvironment tableEnv, List<Row> data, String[] colNames){
-        TypeInformation<?>[] colTypes = {
-                BasicTypeInfo.INT_TYPE_INFO,
-                BasicTypeInfo.STRING_TYPE_INFO,
-                BasicTypeInfo.BOOLEAN_TYPE_INFO,
-                BasicTypeInfo.LONG_TYPE_INFO
-        };
+    static Table createPolygonsTable(StreamTableEnvironment tableEnv, List<Row> data, String[] colNames) {
+        Table table = tableEnv.fromValues(
+                DataTypes.ROW(
+                        DataTypes.FIELD(colNames[0], DataTypes.INT()),
+                        DataTypes.FIELD(colNames[1], DataTypes.STRING()),
+                        DataTypes.FIELD(colNames[2], DataTypes.BOOLEAN()),
+                        DataTypes.FIELD(colNames[3], DataTypes.TIMESTAMP())
+                ),
+                data
+        );
 
-        RowTypeInfo typeInfo = new RowTypeInfo(colTypes, Arrays.copyOfRange(colNames, 0, 4));
-        DataStream<Row> ds = env.fromCollection(data).returns(typeInfo);
-
-        return tableEnv.fromDataStream(ds, $(colNames[0]), $(colNames[1]), $(colNames[2]), $(colNames[3]) );
+        return table;
     }
 
     /* Creates a row in table from JsonNode which has format:
@@ -61,13 +64,15 @@ public class Utils {
     static Row createPointWKT(JsonNode node){
         JsonNode pointNode = node.get("point");
         Long timestampInMs = node.get("timestamp").asLong() / 1000; // convert from micro to milli seconds
+        Geometry point = Constructors.point(pointNode.get("x").asDouble(),pointNode.get("y").asDouble());
 
         Row row = Row.of(node.get("id").asInt(), "POINT (" + pointNode.get("x").asDouble() + " " + pointNode.get("y").asDouble() +")", timestampInMs );
+        //Row row = Row.of(node.get("id").asInt(), point, timestampInMs );
         return row;
     }
 
-    static Row createPolygonWKT(Polygon polygon) throws SQLException, ParseException {
-        Row row = Row.of(polygon.id, polygon.fence, polygon.valid, polygon.creation.getTime() );
+    static Row createPolygonWKT(Polygon polygon) throws ParseException {
+        Row row = Row.of(polygon.id, polygon.fence, polygon.valid, polygon.creation );
         return row;
     }
 

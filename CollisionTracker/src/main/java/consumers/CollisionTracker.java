@@ -13,15 +13,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.sedona.flink.SedonaContext;
+import org.apache.sedona.flink.expressions.Constructors;
+import org.apache.sedona.flink.expressions.Predicates;
+import org.locationtech.jts.geom.Geometry;
+import scala.collection.immutable.Stream;
 
+import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.sql.*;
 import java.util.Properties;
-
+import org.apache.flink.table.api.Table;
+import org.apache.sedona.common.utils.GeomUtils;
 import static consumers.Utils.resultSetToCollection;
-import static org.apache.flink.table.api.Expressions.call;
+import static org.apache.flink.table.api.Expressions.*;
 
 @Slf4j
 public class CollisionTracker {
@@ -76,27 +83,78 @@ public class CollisionTracker {
         DataStreamSource<String> stream = env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source");
         DataStream<JsonNode> jsonStream = stream.map(CollisionTracker::mapToJson);
 
-        // create a wkt table
-        Table locationWktTable = Utils.createLocationsTable( sedona, jsonStream, locationColNames);
+            // create a wkt table
+            Table locationWktTable = Utils.createLocationsTable(sedona, jsonStream, locationColNames);
+            //Constructors.ST_PolygonFromText
+            //Constructors.ST_MakePoint
+            //Constructors.ST_PointFromText
+            //ST_
 
-        sedona.createTemporaryView("locationTable", locationWktTable);
-        // TODO zmenit na sedona namiesto tableEnv
-        Table locationsTable = tableEnv.sqlQuery("SELECT * FROM locationTable");
-        //locationsTable.execute().print();
+            Table pointTable = locationWktTable.select(
+                    call(
+                            new Constructors.ST_GeomFromWKT(),
+                            $(locationColNames[1])
+                    ).as(locationColNames[1]),
+                    $(locationColNames[0])
+            );
+            /*pointTable = pointTable.select($(locationColNames[0]), $(locationColNames[1]),
+                    call("ST_S2CellIDs", $(locationColNames[1]), 6).as("s2id_array"));*/
+            //sedona.createTemporaryView("locationTable", pointTable);
+            //pointTable = sedona.sqlQuery("SELECT geom_point, id_device, s2id_point FROM pointTable CROSS JOIN UNNEST(pointTable.s2id_array) AS tmpTbl1(s2id_point)");
 
+            //Table locationsTable = sedona.sqlQuery("SELECT * FROM locationTable");
+        /*pointTable.printSchema();
+        pointTable.execute().print();*/
 
         try {
-            Connection conn_db = DriverManager.getConnection(db_conn_string, "postgres", "password");
+            Connection conn_db = DriverManager.getConnection(db_conn_string, db_username, db_password);
             //log.info("Connected to the database");
             String query = "SELECT id, creation, valid, ST_AsText(fence) as geo_fence FROM " + polygonsTable;
             try (Statement statement = conn_db.createStatement();
                  ResultSet resultSet = statement.executeQuery(query)) {
 
-                Table polygonsWktTable = Utils.createPolygonsTable( env, sedona, resultSetToCollection(resultSet), polygonColNames);
+                Table polygonsWktTable = Utils.createPolygonsTable( sedona, resultSetToCollection(resultSet), polygonColNames);
 
-                sedona.createTemporaryView("polygonsTable", polygonsWktTable);
-                Table polygonsTable = sedona.sqlQuery("SELECT geom_polygon, id_polygon, valid,creation  FROM polygonsTable");
-                polygonsTable.execute().print();
+                //sedona.createTemporaryView("polygonsTable", polygonsWktTable);
+                //Table polygonsTable = sedona.sqlQuery("Select * from polygonsTable");
+                //polygonsTable.execute().print();
+                try {
+                    Table polygonsTable = polygonsWktTable.select(call(Constructors.ST_GeomFromText.class.getSimpleName(),
+                                    $(polygonColNames[1])).as(polygonColNames[1]),
+                            $(polygonColNames[0]));
+                    sedona.createTemporaryView("polygonTable", polygonsTable);
+                    sedona.createTemporaryView("locationTable", pointTable);
+
+                    Table joined = sedona.sqlQuery(
+                            "SELECT * FROM locationTable, polygonTable"
+                    );
+                    joined.printSchema();
+
+                    Table result = joined
+                            .select($("*"),call("ST_Contains", $(locationColNames[1]), $(polygonColNames[1])).as("contains"));
+                    //result = result.where($("contains").isTrue()).select($(locationColNames[0]), $(polygonColNames[0]));
+                    result = result.select($(locationColNames[0]), $(polygonColNames[0]), $("contains"));
+                    result.printSchema();
+                    result.execute().print();
+
+
+
+                    // Create S2CellID
+                    /*polygonsTable = polygonsTable.select($(polygonColNames[0]), $(polygonColNames[1]),
+                            call("ST_S2CellIDs", $(polygonColNames[1]), 6).as("s2id_array"));
+                    // Explode s2id array
+                    sedona.createTemporaryView("polygonTable", polygonsTable);
+                    polygonsTable = sedona.sqlQuery("SELECT geom_polygon, id_polygon, s2id_polygon FROM polygonTable CROSS JOIN UNNEST(polygonTable.s2id_array) AS tmpTbl2(s2id_polygon)");
+
+                    Table joinResult = pointTable.join(polygonsTable).where($("s2id_point").isEqual($("s2id_polygon")));
+                    // Optional: remove false positives
+                    String expr = "ST_Contains(geom_polygon, geom_point)";
+                    joinResult = joinResult.filter(expr);
+                    joinResult.execute().print();*/
+
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
             } catch (SQLException e) {
                 //log.error("Error executing SQL query: {}", e.getMessage());
                 System.out.println(e.getMessage());
@@ -111,7 +169,7 @@ public class CollisionTracker {
 
         env.execute(JOB_NAME);
         /** TODO
-         *  1. pripojenie do DB a natiahnut si polygony
+         *
          *  2. zobrat polohu a vypocitat do akeho polygonu patri - premysliet akym sposobom..
          *  3. map reduce maybe?
          *   Apache Sedona alebo GEOFLINK?
