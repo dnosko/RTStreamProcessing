@@ -51,7 +51,7 @@ public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutp
 
         if (isAlreadyInPolygon != null && !contains){ // device was in polygon, isnt anymore so device left polygon
             currentList.remove(isAlreadyInPolygon);
-            outEvent = new PolygonLeaveEvent(polygonID, deviceID, false, point, timestamp );
+            outEvent = new PolygonExitEvent(polygonID, deviceID, false, point, timestamp );
         }
         else if (isAlreadyInPolygon == null && contains) { // device wasnt in polygon, is in polygon now so device entered polygon
             currentList.add(polygonID);
@@ -60,8 +60,10 @@ public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutp
         inPolygons.clear();
         inPolygons.addAll(currentList);
 
-        if (outEvent != null)
+        if (outEvent != null) {
             out.collect(outEvent);
+            System.out.println(outEvent);
+        }
     }
 
     private Integer isInPolygon(Iterable<Integer> elements, int polygonID) {
