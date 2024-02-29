@@ -35,7 +35,6 @@ public class CollisionRecorder {
         /************************ Config ***************************/
 
         String questUrl = config.getProperty("quest_db");
-        String quest_data = config.getProperty("quest_data");
         String kafkaServer = config.getProperty("kafka_server");
         String kafkaGroup = config.getProperty("group_id_config");
         String topic = config.getProperty("topic_name");
@@ -74,6 +73,7 @@ public class CollisionRecorder {
 
         try {
             consumer.subscribe(Arrays.asList(topic));
+            System.out.println("Collision Recorder started.");
 
             while (true) {
                 try {

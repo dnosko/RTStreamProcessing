@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-// IN, OUT, KEY, WINDOW
 public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutputEvent > {
     private transient ListState<Integer> inPolygons; // polygons in which the device is currently
     //public abstract KeyedStateStore globalState();
@@ -42,7 +41,6 @@ public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutp
         // copy the old list to a new one
         for (Integer v : currentlyInPolygons) {
             currentList.add(v);
-            //TODO pridava to asi duplicitne do zoznamu hodnoty
             System.out.println(deviceID + ":" + v);
         }
 
@@ -65,7 +63,7 @@ public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutp
 
         if (outEvent != null) {
             out.collect(outEvent);
-            System.out.println(outEvent);
+            //System.out.println(outEvent);
         }
     }
 

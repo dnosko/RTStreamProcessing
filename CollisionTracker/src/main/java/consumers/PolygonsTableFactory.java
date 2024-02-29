@@ -75,7 +75,6 @@ public class PolygonsTableFactory implements TableFactory<Properties, Polygon> {
         while (resultSet.next()) {
             id = resultSet.getInt("id");
             fence  = resultSet.getString("geo_fence");
-            System.out.println(fence);
             valid  = resultSet.getBoolean("valid");
 
             creation  = resultSet.getTimestamp("creation");

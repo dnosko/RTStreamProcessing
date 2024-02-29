@@ -1,6 +1,5 @@
 package consumers;
 
-import java.time.LocalDateTime;
 
 public class PolygonEnterEvent extends PolygonOutputEvent{
     public String collision_point_in;

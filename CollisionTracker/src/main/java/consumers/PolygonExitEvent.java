@@ -1,7 +1,5 @@
 package consumers;
 
-import java.time.LocalDateTime;
-
 public class PolygonExitEvent extends PolygonOutputEvent{
     public String collision_point_out;
     public long collision_date_out;

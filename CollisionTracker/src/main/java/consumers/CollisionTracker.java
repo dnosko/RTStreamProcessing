@@ -95,6 +95,8 @@ public class CollisionTracker {
         TableFactory<DataStream<JsonNode>, JsonNode> locationsFactory = new LocationsTableFactory();
         TableFactory<Properties, Polygon> polygonsFactory = new PolygonsTableFactory();
 
+        System.out.println("Collision tracker running...");
+
         try {
             // initialize tables
             Table polygonsWktTable = polygonsFactory.createTable(sedona, databaseProps, polygonColNames);
@@ -120,7 +122,6 @@ public class CollisionTracker {
             DataStream<String> collisionsEvents = resultStream.keyBy(r -> (Integer) r.getField(1))
                                 .flatMap(new PolygonMatchingFlatMap()).map(e -> e.toString());
 
-            //collisionsEvents.print();
             /*
             * Please ensure that you use unique transactionalIdPrefix across your applications running
             *  on the same Kafka cluster such that multiple running jobs do not interfere in their transactions!

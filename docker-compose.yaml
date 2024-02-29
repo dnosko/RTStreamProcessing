@@ -121,4 +121,19 @@ services:
     restart: on-failure
     healthcheck:
         test: "pg_isready -U postgres -h localhost -p 25432 -d data"
+  collisionrecorder:
+    container_name: "collision_recorder"
+    build:
+      dockerfile: ./docker/Dockerfile_collisions_recorder
+      context: .
+    ports:
+      - '8087:8087'
+    expose:
+      - "9009"
+    depends_on:
+      - kafka1
+      - questdb
+    links:
+      - kafka1:kafka1
+      - questdb:questdb
 
