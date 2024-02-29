@@ -1,16 +1,12 @@
 import sqlalchemy as db
-from sqlalchemy import select, Table, Column, Integer, MetaData, exc
 from typing import List, Optional
 
 from fastapi import FastAPI, Path, Query
 import psycopg2 as pg
-import time
-import json
+
 import schemas_historical as _schemas
 
-from sqlalchemy import select, Table, Column, Integer, MetaData, exc
-
-#TODO sqlalchemy
+from sqlalchemy import select, Table, Column, Integer, MetaData, exc, Float, DateTime, and_
 
 conn_str = 'user=admin password=quest host=127.0.0.1 port=8812 dbname=qdb'
 
@@ -19,10 +15,18 @@ api = FastAPI()
 
 # TODO rovnake ako v rt_locations, takze to prehodit do nejakeho zvlast suboru v nejakej zlozke ze db?
 engine = db.create_engine("postgresql://postgres:password@localhost:25432/data")
+engine_quest = db.create_engine("postgresql://admin:quest@localhost:8812/qdb")
 metadata = MetaData()
 users = Table('users', metadata,
                    Column('id', Integer, primary_key=True),
                    Column('device', Integer)
+                   )
+
+locations = Table('locations_table', metadata,
+                   Column('id', Integer),
+                   Column('point_x', Float),
+                   Column('point_y', Float),
+                   Column('timestamp', DateTime)
                    )
 
 
@@ -44,18 +48,22 @@ def trajectory(user: int = Path(..., title="User ID"), time: str = Query('', tit
     if time == '':
         query = f'SELECT point_x,point_y,timestamp FROM locations_table where id = {device};'
     else:
-        query = f'SELECT point_x,point_y,timestamp FROM locations_table where id = {device} and timestamp in {time};'
+        query = f"SELECT point_x,point_y,timestamp FROM locations_table where id = {device} and timestamp in \'{time}\';"
+
+
     with pg.connect(conn_str) as connection:
 
         with connection.cursor() as cur:
             cur.execute(query)
             records = cur.fetchall()
 
-    trajectory = [{'timestamp': timestamp, 'point': {'x': x, 'y': y}} for
-                    x, y, timestamp in
-                    records]
+        trajectory = [{'timestamp': timestamp, 'point': {'x': x, 'y': y}} for
+                          x, y, timestamp in
+                          records]
 
-    return _schemas.Trajectory(id=user, trajectory=trajectory)
+        return _schemas.Trajectory(id=user, trajectory=trajectory)
+
+
 
 ## location of users in specified time
 @api.get("/history/locations/", response_model=List[_schemas.Trajectory])

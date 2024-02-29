@@ -7,7 +7,6 @@ import psycopg2 as pg
 import json
 import schemas_collisions_polygons as _schemas
 
-#TODO sqlalchemy
 
 conn_str = 'user=admin password=quest host=127.0.0.1 port=8812 dbname=qdb'
 
