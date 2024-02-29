@@ -17,14 +17,12 @@ public class PolygonEnterEvent extends PolygonOutputEvent{
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        sb.append("\"event_type\": ").append(eventType.getValue()).append(", ");
-            sb.append("{");
-            sb.append("\"polygon\": ").append(polygon).append(", ");
-            sb.append("\"device\": ").append(device).append(", ");
-            sb.append("\"in\": ").append(in).append(", ");
-            sb.append("\"collision_point_in\": \"").append(collision_point_in).append("\", ");
-            sb.append("\"collision_date_in\": \"").append(collision_date_in).append("\"");
-            sb.append("}");
+        sb.append("\"event_type\": \"").append(eventType.getValue()).append("\", ");
+        sb.append("\"polygon\": ").append(polygon).append(", ");
+        sb.append("\"device\": ").append(device).append(", ");
+        sb.append("\"in\": ").append(in).append(", ");
+        sb.append("\"collision_point_in\": ").append(pointToFormattedString(collision_point_in)).append(", ");
+        sb.append("\"collision_date_in\": \"").append(collision_date_in).append("\"");
         sb.append("}");
         return sb.toString();
     }
