@@ -1,19 +1,11 @@
 package consumers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.questdb.cairo.*;
-import io.questdb.cairo.sql.Record;
-import io.questdb.cairo.sql.RecordCursor;
-import io.questdb.cairo.sql.RecordCursorFactory;
-import io.questdb.cairo.wal.ApplyWal2TableJob;
-import io.questdb.cairo.wal.WalWriter;
-import io.questdb.cairo.security.AllowAllSecurityContext;
-import io.questdb.griffin.SqlException;
-import io.questdb.griffin.SqlExecutionContext;
-import io.questdb.griffin.SqlExecutionContextImpl;
+
 import io.questdb.std.NumericException;
-import io.questdb.std.Os;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
@@ -22,7 +14,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 
-import java.sql.ResultSet;
+import java.sql.*;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Properties;
@@ -68,27 +60,29 @@ public class CollisionRecorder {
 
         /**********************************************************/
 
-        //TODO questDB conneciton
-
-        //JedisPooled jedis = new JedisPooled(redisHost, redisPort ); // redis
-        //AtomicInteger cnt = new AtomicInteger(0);
-
         final Consumer<String, String> consumer = new KafkaConsumer<>(consumer_props);
-        final CairoConfiguration configuration = new DefaultCairoConfiguration(quest_data);
-        System.out.println(configuration.getAllowTableRegistrySharedWrite());
 
-        try (CairoEngine engine = new CairoEngine(configuration)){
-            //Connection connection = DriverManager.getConnection(questUrl);
-            final SqlExecutionContext ctx = new SqlExecutionContextImpl(engine, 1)
-                    .with(AllowAllSecurityContext.INSTANCE, null);
-            System.out.println("here");
-            engine.ddl("CREATE TABLE IF NOT EXISTS collisions_table (" +
-                    "id INT AUTO_INCREMENT, device int, polygon int, in boolean, collision_date_in timestamp, collision_date_out timestamp, " +
-                    "collision_point_in geohash("+geoHashCharSize+"c), collision_point_out geohash("+geoHashCharSize+"c)" +
-                    ") TIMESTAMP(collision_date_in) PARTITION BY DAY WAL", ctx);
+        Properties questProps = new Properties();
+        questProps.setProperty("user", "admin");
+        questProps.setProperty("password", "quest");
+        questProps.setProperty("sslmode", "disable");
 
-            final TableToken tableToken = engine.getTableTokenIfExists("collisions");
+        final Connection connection = DriverManager.getConnection(
+                questUrl, questProps);
+        connection.setAutoCommit(false);
 
+
+        // create table
+        final PreparedStatement statement = connection.prepareStatement(
+                "CREATE TABLE IF NOT EXISTS collisions_table (" +
+                        "device int, polygon int, inside boolean, collision_date_in timestamp, collision_date_out timestamp , " +
+                        "collision_point_in STRING, collision_point_out STRING" +
+                        ") TIMESTAMP(collision_date_in) PARTITION BY DAY WAL;");
+        statement.execute();
+
+
+
+        try {
             consumer.subscribe(Arrays.asList(topic));
 
             while (true) {
@@ -103,21 +97,11 @@ public class CollisionRecorder {
                         JsonNode jsonRecord = mapToJson(value);
                         String typeOfRecord = jsonRecord.get("event_type").asText();
                         if (typeOfRecord.equals("enter")){
-                            insertNewRecord(engine, tableToken, jsonRecord);
-                            // apply WAL to the table
-                            try (ApplyWal2TableJob walApplyJob = new ApplyWal2TableJob(engine, 1, 1)) {
-                                while (walApplyJob.run(0)) ;
-                            }
+                            insertNewRecord(connection, jsonRecord);
+
                         }
                         else {
-                            try {
-                                long rowId = getRowId(engine,ctx, jsonRecord);
-                                updateExistingRecord(engine,tableToken,jsonRecord, rowId);
-                            }
-                            catch (SqlException e) {
-                                e.printStackTrace();
-                                System.out.println("Couldn't update row.");
-                            }
+                            updateExistingRecord(connection, jsonRecord);
                         }
                     }
                 } catch (KafkaException e) {
@@ -142,52 +126,62 @@ public class CollisionRecorder {
         }
     }
 
-
-    private static void insertNewRecord(CairoEngine engine, TableToken tableToken, JsonNode record){
-        try (WalWriter writer = engine.getWalWriter(tableToken)) {
-                long geoHashPointIn = getGeoHashFromJson("collision_point_in", record);
-                TableWriter.Row row = writer.newRow();
-                row.putInt(0, record.get("device").asInt());
-                row.putInt(1, record.get("polygon").asInt());
-                row.putBool(2, record.get("in").asBoolean());
-                row.putTimestamp(3, record.get("collision_date_in").asLong());
-                row.putTimestamp(4, 0L);
-                row.putGeoHash(5, geoHashPointIn);
-                //row.putGeoHash(6, null);
-                row.append();
-            writer.commit();
-        }
-        catch (NumericException e){
+    private static String mapPointToString(JsonNode jsonNode) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.writeValueAsString(jsonNode);
+        } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
+        return null;
     }
 
-    private static long getRowId(CairoEngine engine,SqlExecutionContext ctx, JsonNode record) throws SqlException {
-        int device = record.get("device").asInt();
+
+    private static void insertNewRecord(Connection connection, JsonNode record) throws NumericException {
+        long date_in = record.get("collision_date_in").asLong(); // convert from milli to micro seconds
         int polygon = record.get("polygon").asInt();
+        int device =  record.get("device").asInt();
+        boolean in = record.get("in").asBoolean();
+        Timestamp date_ts = new Timestamp(date_in);
+        System.out.println(date_ts);
+        String point_in = mapPointToString(record.get("collision_point_in"));
 
-        // Perform a select query to retrieve the id of the row to update
-        String query = "SELECT id FROM your_table WHERE in = true and device = " + device + " AND polygon = " + polygon;
-        try (RecordCursorFactory factory = engine.select(query, ctx)) {
-            try (RecordCursor cursor = factory.getCursor(ctx)) {
-                final Record result = cursor.getRecord();
-                return result.getRowId();
-            }
+        try (PreparedStatement preparedStatement = connection.prepareStatement(
+                "INSERT INTO collisions_table (device, polygon, inside, collision_date_in, collision_point_in) VALUES (?, ?, ?, ?, ?)")) {
+            preparedStatement.setInt(1, device);
+            preparedStatement.setInt(2, polygon);
+            preparedStatement.setBoolean(3, in);
+            preparedStatement.setTimestamp(
+                    4,date_ts);
+            preparedStatement.setString(5, point_in);
+            preparedStatement.execute();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private static void updateExistingRecord(CairoEngine engine, TableToken tableToken, JsonNode record, Long rowId){
-        try (WalWriter writer = engine.getWalWriter(tableToken)) {
-            long geoHashPointOut = getGeoHashFromJson("collision_point_out", record);
 
-            TableWriter.Row row = writer.newRow(rowId);
-            row.putBool(2, false); // Update in (polygon) to false (exit event)
-            row.putTimestamp(4, record.get("collision_date_out").asLong());
-            row.putGeoHash(6, geoHashPointOut);
-            row.append();
-            writer.commit();
-        } catch (NumericException e) {
-            e.printStackTrace();
+    private static void updateExistingRecord(Connection connection, JsonNode record){
+        long date_out = record.get("collision_date_out").asLong();
+        int polygon = record.get("polygon").asInt();
+        int device =  record.get("device").asInt();
+        String point_out = mapPointToString(record.get("collision_point_out"));
+        System.out.println(point_out);
+        String updateSql = "UPDATE collisions_table SET " +
+                "collision_date_out = ?, " + // Use placeholder for Timestamp
+                "collision_point_out = ? " + // Use placeholder for String value
+                "WHERE polygon = ? AND device = ? AND inside = ?";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(updateSql)) {
+            pstmt.setTimestamp(1, new Timestamp(date_out)); // Set Timestamp parameter
+            pstmt.setString(2, point_out); // Set String parameter
+            pstmt.setInt(3, polygon); // Set polygon parameter
+            pstmt.setInt(4, device); // Set device parameter
+            pstmt.setBoolean(5, true);
+
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -195,7 +189,9 @@ public class CollisionRecorder {
         JsonNode point = node.get(fieldName);
         double lat = point.get("x").asDouble();
         double lng = point.get("y").asDouble();
-        return GeoHashes.fromCoordinatesDeg(lat, lng,geoHashBitSize);
+        long hash = GeoHashes.fromCoordinatesDeg(lat, lng, geoHashBitSize);
+        System.out.println(lat);
+        return hash;
     }
 
     /** Map function to convert String to Json */
