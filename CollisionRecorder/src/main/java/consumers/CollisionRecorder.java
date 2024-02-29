@@ -3,7 +3,6 @@ package consumers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.questdb.cairo.*;
 
 import io.questdb.std.NumericException;
 import org.apache.kafka.clients.consumer.*;
@@ -21,15 +20,7 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// TODO zobrat consumera s locationRecorder
-// QuestDB connect jbdc
-// podla typu udalosti insertnut alebo updatnut hodnotu v DB
 public class CollisionRecorder {
-
-    static int geoHashCharSize = 10;
-
-    // 1 char = 5 bits. https://questdb.io/docs/concept/geohashes/
-    static int geoHashBitSize = geoHashCharSize*5;
 
     public static void main(final String[] args) throws Exception {
 
@@ -81,7 +72,6 @@ public class CollisionRecorder {
         statement.execute();
 
 
-
         try {
             consumer.subscribe(Arrays.asList(topic));
 
@@ -89,18 +79,17 @@ public class CollisionRecorder {
                 try {
                     ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                     for (ConsumerRecord<String, String> record : records) {
-                        //TODO spracovanie recordu na zaklade typu insert alebo update
-                        // Process the record
 
-                        String key = record.key();
                         String value = record.value();
                         JsonNode jsonRecord = mapToJson(value);
                         String typeOfRecord = jsonRecord.get("event_type").asText();
-                        if (typeOfRecord.equals("enter")){
-                            insertNewRecord(connection, jsonRecord);
 
+
+                        if (typeOfRecord.equals("enter")){ // enter polygon, create new record
+                            insertNewRecord(connection, jsonRecord);
                         }
                         else {
+                            // exit polygon, update record
                             updateExistingRecord(connection, jsonRecord);
                         }
                     }
@@ -126,6 +115,7 @@ public class CollisionRecorder {
         }
     }
 
+    /** Maps json inner dictionary to string */
     private static String mapPointToString(JsonNode jsonNode) {
         ObjectMapper mapper = new ObjectMapper();
         try {
@@ -136,7 +126,7 @@ public class CollisionRecorder {
         return null;
     }
 
-
+    /** Inserts new collision to database. */
     private static void insertNewRecord(Connection connection, JsonNode record) throws NumericException {
         long date_in = record.get("collision_date_in").asLong(); // convert from milli to micro seconds
         int polygon = record.get("polygon").asInt();
@@ -159,7 +149,7 @@ public class CollisionRecorder {
         }
     }
 
-
+    /** Updates collision record when the device exits polygon. */
     private static void updateExistingRecord(Connection connection, JsonNode record){
         long date_out = record.get("collision_date_out").asLong();
         int polygon = record.get("polygon").asInt();
@@ -173,11 +163,11 @@ public class CollisionRecorder {
                 "WHERE polygon = ? AND device = ? AND inside = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(updateSql)) {
-            pstmt.setTimestamp(1, new Timestamp(date_out)); // Set Timestamp parameter
-            pstmt.setString(2, point_out); // Set String parameter
+            pstmt.setTimestamp(1, new Timestamp(date_out));
+            pstmt.setString(2, point_out);
             pstmt.setBoolean(3, false);
-            pstmt.setInt(4, polygon); // Set polygon parameter
-            pstmt.setInt(5, device); // Set device parameter
+            pstmt.setInt(4, polygon);
+            pstmt.setInt(5, device);
             pstmt.setBoolean(6, true);
 
             pstmt.executeUpdate();
