@@ -143,7 +143,6 @@ public class CollisionRecorder {
         int device =  record.get("device").asInt();
         boolean in = record.get("in").asBoolean();
         Timestamp date_ts = new Timestamp(date_in);
-        System.out.println(date_ts);
         String point_in = mapPointToString(record.get("collision_point_in"));
 
         try (PreparedStatement preparedStatement = connection.prepareStatement(
@@ -166,32 +165,25 @@ public class CollisionRecorder {
         int polygon = record.get("polygon").asInt();
         int device =  record.get("device").asInt();
         String point_out = mapPointToString(record.get("collision_point_out"));
-        System.out.println(point_out);
+
         String updateSql = "UPDATE collisions_table SET " +
-                "collision_date_out = ?, " + // Use placeholder for Timestamp
-                "collision_point_out = ? " + // Use placeholder for String value
+                "collision_date_out = ?, " +
+                "collision_point_out = ?, " +
+                "inside = ? " +
                 "WHERE polygon = ? AND device = ? AND inside = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(updateSql)) {
             pstmt.setTimestamp(1, new Timestamp(date_out)); // Set Timestamp parameter
             pstmt.setString(2, point_out); // Set String parameter
-            pstmt.setInt(3, polygon); // Set polygon parameter
-            pstmt.setInt(4, device); // Set device parameter
-            pstmt.setBoolean(5, true);
+            pstmt.setBoolean(3, false);
+            pstmt.setInt(4, polygon); // Set polygon parameter
+            pstmt.setInt(5, device); // Set device parameter
+            pstmt.setBoolean(6, true);
 
             pstmt.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private static long getGeoHashFromJson(String fieldName, JsonNode node) throws NumericException {
-        JsonNode point = node.get(fieldName);
-        double lat = point.get("x").asDouble();
-        double lng = point.get("y").asDouble();
-        long hash = GeoHashes.fromCoordinatesDeg(lat, lng, geoHashBitSize);
-        System.out.println(lat);
-        return hash;
     }
 
     /** Map function to convert String to Json */

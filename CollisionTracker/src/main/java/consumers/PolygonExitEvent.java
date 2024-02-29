@@ -4,9 +4,9 @@ import java.time.LocalDateTime;
 
 public class PolygonExitEvent extends PolygonOutputEvent{
     public String collision_point_out;
-    public LocalDateTime collision_date_out;
+    public long collision_date_out;
 
-    public PolygonExitEvent(int polygon, int device, boolean in, String collision_point_out, LocalDateTime collision_date_out){
+    public PolygonExitEvent(int polygon, int device, boolean in, String collision_point_out, long collision_date_out){
         super(polygon,device,in, eventTypeEnum.EXIT_EVENT);
         this.collision_point_out = collision_point_out;
         this.collision_date_out = collision_date_out;

@@ -8,6 +8,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +30,9 @@ public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutp
 
         int deviceID = (Integer) row.getField(1);
         String point = row.getField(0).toString();
-        LocalDateTime timestamp = (LocalDateTime) row.getField(2);
+        LocalDateTime timestampRow = (LocalDateTime) row.getField(2);
+        Timestamp timestamp = Timestamp.valueOf(timestampRow);
+
         int polygonID = (Integer) row.getField(4);
         boolean contains = (Boolean) row.getField(5);
 
@@ -51,11 +54,11 @@ public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutp
 
         if (isAlreadyInPolygon != null && !contains){ // device was in polygon, isnt anymore so device left polygon
             currentList.remove(isAlreadyInPolygon);
-            outEvent = new PolygonExitEvent(polygonID, deviceID, false, point, timestamp );
+            outEvent = new PolygonExitEvent(polygonID, deviceID, false, point, timestamp.getTime());
         }
         else if (isAlreadyInPolygon == null && contains) { // device wasnt in polygon, is in polygon now so device entered polygon
             currentList.add(polygonID);
-            outEvent = new PolygonEnterEvent(polygonID, deviceID, true, point, timestamp);
+            outEvent = new PolygonEnterEvent(polygonID, deviceID, true, point, timestamp.getTime());
         }
         inPolygons.clear();
         inPolygons.addAll(currentList);

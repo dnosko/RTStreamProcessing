@@ -107,11 +107,6 @@ public class CollisionTracker {
             sedona.createTemporaryView("polygonTable", polygonsTable);
             sedona.createTemporaryView("locationTable", locationsTable);
 
-            //Table result = polygonsTable.select(call(new Functions.ST_AsText(), $(polygonColNames[1])).as(polygonColNames[1]), $(polygonColNames[0]));
-            //Table result = locationsTable.select(call(new Functions.ST_AsText(), $(locationColNames[1])).as(locationColNames[1]), $(locationColNames[0]));
-            //result.execute().print();
-
-
             Table joined = sedona.sqlQuery("SELECT *, " +
                     "ST_Contains(" + polygonColNames[1] + "," + locationColNames[1] +") AS is_in_polygon "+
                     "FROM locationTable, polygonTable");
@@ -156,15 +151,6 @@ public class CollisionTracker {
 
 
         env.execute(JOB_NAME);
-        /** TODO
-         *   sink do 2 topikov v kafka
-         */
-
-
-        //
-        // 3. porovnat zmenu -> stavovost pre kazde ID zariadenia
-        // 4a. vytvorit novy topic
-        // 4. vyegenerovat prislusnnu udalost do topicu
     }
 
     private static Properties setDatabaseProperties(String conn_str, String username, String password, String table){
