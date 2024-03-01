@@ -7,7 +7,6 @@ import psycopg2 as pg
 import json
 import schemas_collisions_polygons as _schemas
 
-
 conn_str = 'user=admin password=quest host=127.0.0.1 port=8812 dbname=qdb'
 
 INTERNAL_SERVER_ERROR = 500
@@ -17,9 +16,9 @@ api = FastAPI()
 engine = db.create_engine("postgresql://postgres:password@localhost:25432/data")
 metadata = MetaData()
 users = Table('users', metadata,
-                   Column('id', Integer, primary_key=True),
-                   Column('device', Integer)
-                   )
+              Column('id', Integer, primary_key=True),
+              Column('device', Integer)
+              )
 
 polygons_category = Table('category_polygons', metadata,
                           Column('id', Integer, primary_key=True),
@@ -32,10 +31,12 @@ polygons = Table('polygons', metadata,
                  Column('category', Integer, ForeignKey('polygons_category.id')),
                  Column('fence', String))
 
+
 def strToPoint(point: str):
     if point is not None:
         newPoint = json.loads(point)
         return _schemas.Point(**newPoint)
+
 
 ## returns all polygons from database, can be filtered by category id
 @api.get("/polygons/", response_model=List[_schemas.Polygon])
@@ -46,7 +47,7 @@ def polygons_on_map(valid: Optional[bool] = Query(None), category: Optional[int]
         polygons.join(polygons_category, polygons.c.category == polygons_category.c.id)
     )
 
-    if category is not None: # category specified
+    if category is not None:  # category specified
         query = query.where(polygons.c.category == category)
     if valid is not None:
         query = query.where(polygons.c.valid == valid)
@@ -55,15 +56,16 @@ def polygons_on_map(valid: Optional[bool] = Query(None), category: Optional[int]
         result = conn.execute(query)
         all_polygons = result.fetchall()
 
-    result = [_schemas.Polygon(id=row[0], creation=row[1], valid=row[2], category=row[3], fence=row[4]) for row in all_polygons]
+    result = [_schemas.Polygon(id=row[0], creation=row[1], valid=row[2], category=row[3], fence=row[4]) for row in
+              all_polygons]
 
     return result
+
 
 # Aké jednotky sa nachádzali v oblasti definovanej polygonom v určitom časovom okne
 # TODO pridat mapping user-device
 @api.get("/collisions/history/", response_model=List[_schemas.Collision])
 def history_collisions(time: str, polygons: Optional[List[int]] = Query(None, title="Polygonds ids")):
-
     if polygons:
         string_polygons = ','.join(str(item) for item in polygons)
         query = f"SELECT * FROM collisions_table where polygon in ({string_polygons}) and collision_date_in in \'{time}\';"
@@ -85,6 +87,7 @@ def history_collisions(time: str, polygons: Optional[List[int]] = Query(None, ti
                                          ) for row in records]
     return result
 
+
 # Aké jednotky sa nachádzajú aktuálne v oblasti definovanej polygonom
 # TODO pridat mapping user - device
 @api.get("/collisions/current/", response_model=List[_schemas.InsideOfPolygon])
@@ -101,13 +104,14 @@ def currently_in_polygon(polygons: Optional[List[int]] = Query(None, title="Poly
             records = cur.fetchall()
 
             result = [_schemas.InsideOfPolygon(device_id=row[0],
-                                         polygon_id=row[1],
-                                         enter_date=row[2]
-                                         ) for row in records]
+                                               polygon_id=row[1],
+                                               enter_date=row[2]
+                                               ) for row in records]
     return result
+
 
 ## Kto aktuálne prekročil hranice polygonu - nie som si ista ako to vyriesit
 # TODO
 @api.get("/collisions/new/", response_model=List[_schemas.Polygon])
 def new_collisions(time: str, user: Optional[List[int]] = Query(None, title="User IDs")):
-   pass
+    pass
