@@ -1,14 +1,14 @@
 import asyncio
 import websockets
-from producer.KafkaProducer import KafkaProducer
+from KafkaProducer import KafkaProducer
 
 class ServerWS:
     # toto vsetko tahat z config suboru
-    HOST = 'localhost'
+    HOST = "0.0.0.0" #'localhost'
     PORT = 8001
     CLIENTID = 'consumerXY' # toto asi idealne do configu? alebo nejako ze co ak ich bdue viac tych klienotv?
     TOPIC = 'new_locations'
-    KAFKASERVER = 'localhost:9092'
+    KAFKASERVER = 'kafka1:19092'
 
     FLUSH_INTERVAL = 1000
 

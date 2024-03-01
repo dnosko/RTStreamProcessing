@@ -136,4 +136,15 @@ services:
     links:
       - kafka1:kafka1
       - questdb:questdb
+  producer:
+    container_name: "producer"
+    build:
+      dockerfile: ./docker/Dockerfile_producer
+      context: .
+    ports:
+      - '8001:8001'
+    depends_on:
+      - kafka1
+    links:
+      - kafka1:kafka1
 

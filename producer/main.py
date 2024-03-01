@@ -1,6 +1,7 @@
 import asyncio
+import traceback
 
-from producer.ServerWS import ServerWS
+from ServerWS import ServerWS
 import sys
 
 
@@ -9,7 +10,8 @@ async def main():
 
     try:
         await ws.run()
-
+    except Exception:
+        traceback.print_exc()
     finally:
         print("WebSocket server stopped.")
         sys.exit(0)

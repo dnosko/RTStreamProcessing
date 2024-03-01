@@ -19,16 +19,7 @@ psql -U "$POSTGRES_USER" <<-EOSQL
    );
   CREATE TABLE IF NOT EXISTS users ( id SERIAL PRIMARY KEY, device INT);
 
-  CREATE TABLE IF NOT EXISTS category_points (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(30)
-   );
-
-  CREATE TABLE IF NOT EXISTS points (id SERIAL PRIMARY KEY, category INT REFERENCES category_points(id));
-
   INSERT INTO category_polygons (name) VALUES ('no go zone'), ('safe'), ('incident');
-
-  INSERT INTO category_points (name) VALUES ('hydrant');
 
   INSERT INTO polygons (creation, fence, valid, category) VALUES
     (CURRENT_TIMESTAMP, 'POLYGON ((3 3, 4 6, 5 3, 3 3))', TRUE, 1);
