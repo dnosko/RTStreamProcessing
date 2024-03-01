@@ -13,7 +13,14 @@ class Location(BaseModel):
     point: Point
     timestamp: datetime
 
-
 class Trajectory(BaseModel):
-    id: int
+    id_user: int
+    id_device: int
     trajectory: List[Location]
+
+class SpecifiedTimeTrajectory(Trajectory):
+    in_time: str
+
+class MultipleUsersTrajectory(BaseModel):
+    in_time: str
+    trajectories: List[Trajectory]
