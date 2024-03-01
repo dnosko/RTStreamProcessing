@@ -36,6 +36,8 @@ services:
     image: zookeeper:3.6.2
     ports:
       - "2181:2181"
+    networks:
+      - internal_network
   kafka1:
     image: confluentinc/cp-kafka:7.4.1
     container_name: "kafka1"
@@ -145,11 +147,10 @@ services:
     expose:
       - "9009"
     depends_on:
-      - kafka1
-      - questdb
-    links:
-      - kafka1:kafka1
-      - questdb:questdb
+      questdb:
+        condition: service_started
+      kafka1:
+        condition: service_started
     networks:
       - internal_network
   producer:
