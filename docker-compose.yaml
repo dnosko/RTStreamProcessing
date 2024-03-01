@@ -16,6 +16,8 @@ services:
       KAFKA_CLUSTERS_0_METRICS_PORT: 9997
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: connect
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
+    networks:
+      - internal_network
   questdb:
     image: questdb/questdb:7.0.1
     restart: always
@@ -28,6 +30,8 @@ services:
       - ./questdb:/root/.questdb
     environment:
       - JAVA_OPTS=-Djava.locale.providers=JRE,SPI
+    networks:
+      - internal_network
   zookeeper:
     image: zookeeper:3.6.2
     ports:
@@ -52,6 +56,8 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_JMX_PORT: 9997
       KAFKA_JMX_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka0 -Dcom.sun.management.jmxremote.rmi.port=9997
+    networks:
+      - internal_network
   connect:
     image: kafka-connect-with-questdb
     build:
@@ -76,6 +82,8 @@ services:
       CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
       CONNECT_REST_ADVERTISED_HOST_NAME: "connect"
+    networks:
+      - internal_network
   redis:
     image: redis/redis-stack:latest
     container_name: "redis"
@@ -86,6 +94,8 @@ services:
       - 6379
     volumes:
         - ./redis_data:/data
+    networks:
+      - internal_network
   locationrecorder:
     container_name: "location_recorder"
     build:
@@ -104,6 +114,8 @@ services:
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
+    networks:
+      - internal_network
   postgres:
     image: postgis/postgis:16-3.4
     container_name: "postgis"
@@ -121,6 +133,8 @@ services:
     restart: on-failure
     healthcheck:
         test: "pg_isready -U postgres -h localhost -p 25432 -d data"
+    networks:
+      - internal_network
   collisionrecorder:
     container_name: "collision_recorder"
     build:
@@ -136,6 +150,8 @@ services:
     links:
       - kafka1:kafka1
       - questdb:questdb
+    networks:
+      - internal_network
   producer:
     container_name: "producer"
     build:
@@ -145,6 +161,8 @@ services:
       - '8001:8001'
     depends_on:
       - kafka1
-    links:
-      - kafka1:kafka1
-
+    networks:
+      - internal_network
+networks:
+  internal_network:
+    driver: bridge
