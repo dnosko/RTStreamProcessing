@@ -146,6 +146,7 @@ services:
       - '8087:8087'
     expose:
       - "9009"
+    restart: on-failure
     depends_on:
       questdb:
         condition: service_started
@@ -162,6 +163,55 @@ services:
       - '8001:8001'
     depends_on:
       - kafka1
+    networks:
+      - internal_network
+  api_collisions:
+    container_name: api_collisions
+    build:
+        context: .
+        dockerfile: docker/Dockerfile_api_collisions
+    depends_on:
+        questdb:
+          condition: service_started
+        redis:
+          condition: service_started
+        postgres:
+          condition: service_started
+    restart: on-failure
+    ports:
+      - "8100:8100"
+    networks:
+      - internal_network
+  api_historical:
+    container_name: api_historical
+    build:
+      context: .
+      dockerfile: docker/Dockerfile_api_historical
+    depends_on:
+      questdb:
+        condition: service_started
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_started
+    restart: on-failure
+    ports:
+      - "8101:8101"
+    networks:
+      - internal_network
+  api_realtime:
+    container_name: api_realtime
+    build:
+      context: .
+      dockerfile: docker/Dockerfile_api_rt_locations
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_started
+    restart: on-failure
+    ports:
+      - "8102:8102"
     networks:
       - internal_network
 networks:

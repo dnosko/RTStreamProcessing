@@ -13,11 +13,10 @@ from schemas import schemas_historical as _schemas
 from sqlalchemy import  exc
 
 
-conn_str = 'user=admin password=quest host=127.0.0.1 port=8812 dbname=qdb'
+conn_str = 'user=admin password=quest host=questdb port=8812 dbname=qdb'
 
-engine = db.create_engine("postgresql://postgres:password@localhost:25432/data")
-engine_quest = db.create_engine("postgresql://admin:quest@localhost:8812/qdb")
-redis_cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
+engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
+redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
 
 
 @asynccontextmanager
@@ -50,7 +49,7 @@ def trajectory(user: int = Path(..., title="User ID"),
         descr = str(e.__doc__) + str(e.orig)
         return {"id": e.code, "description": descr, "http_response_code": INTERNAL_SERVER_ERROR}
 
-    if time is not "all":
+    if time != "all":
         query = f"SELECT id, point_x,point_y,timestamp FROM locations_table where id = {device} and timestamp in \'{time}\';"
     else:
         query = f'SELECT id, point_x,point_y,timestamp FROM locations_table where id = {device};'

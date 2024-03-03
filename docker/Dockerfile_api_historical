@@ -1,0 +1,23 @@
+FROM python:3
+RUN apt-get update
+RUN python -m venv /opt/venv
+# Use the virtualenv:
+ENV PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /api
+
+# Copy files relative to the working directory
+COPY api/schemas/__init__.py schemas/
+COPY api/schemas/schemas_historical.py schemas/
+COPY api/utils_api/ utils_api/
+COPY api/__init__.py ./
+COPY api/historical_locations.py ./
+
+
+COPY api/requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+
+ENV PYTHONUNBUFFERED=1
+
+
+CMD ["uvicorn", "historical_locations:api", "--host", "0.0.0.0", "--port", "8101", "--reload"]

@@ -16,9 +16,9 @@ INTERNAL_SERVER_ERROR = 500
 NOT_FOUND_ERROR = 404
 BAD_REQUEST_ERROR = 400
 
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
-redis_cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
-engine = db.create_engine("postgresql://postgres:password@localhost:25432/data")
+redis_client = redis.StrictRedis(host='redis', port=6379, db=0, decode_responses=True)
+redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
+engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):

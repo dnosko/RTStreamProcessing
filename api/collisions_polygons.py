@@ -14,11 +14,11 @@ from utils_api.database_utils import add_to_select_in_list, get_users_from_db
 from utils_api.database_utils import get_users_devices, get_polygons
 
 
-conn_str = 'user=admin password=quest host=127.0.0.1 port=8812 dbname=qdb'
+conn_str = 'user=admin password=quest host=questdb port=8812 dbname=qdb'
 
 
-redis_cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
-engine = db.create_engine("postgresql://postgres:password@localhost:25432/data")
+redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
+engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
 
 INTERNAL_SERVER_ERROR = 500
 
@@ -62,7 +62,7 @@ def polygons_on_map(valid: Optional[bool] = Query(None), category: Optional[int]
 # Aké jednotky sa nachádzali v oblasti definovanej polygonom v určitom časovom okne
 # (for format see https://questdb.io/docs/reference/sql/where/#timestamp-and-date)
 @api.get("/collisions/history/", response_model=_schemas.CollisionsWithTimeQuery)
-def history_collisions(time: Query(..., title="Time", description="The time parameter specifying the time range for querying collisions. See https://questdb.io/docs/reference/sql/where/#timestamp-and-date "),
+def history_collisions(time: str = Query(..., title="Time", description="The time parameter specifying the time range for querying collisions. See https://questdb.io/docs/reference/sql/where/#timestamp-and-date "),
                        polygons: Optional[List[int]] = Query(None, title="Polygons ids"),
                        user: Optional[List[int]] = Query(None, title="User ids")):
 
