@@ -70,7 +70,7 @@ public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutp
     private Integer isInPolygon(Iterable<Integer> elements, int polygonID) {
         for (int alreadyIn : elements) {
             if (polygonID == alreadyIn) {
-                return polygonID;
+                return alreadyIn;
             }
         }
         return null;
