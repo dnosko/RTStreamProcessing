@@ -3,20 +3,6 @@ from itertools import groupby
 from operator import itemgetter
 
 
-def add_to_select_in_list(original_query: str, items: list, column: str) -> str:
-    """ Takes select query and adds IN condition from list of items for specified database column.
-    @:param original_query: select query (ends with ;)
-    @:param  items: list of items for IN condition
-    @:param column: column name
-    """
-    string_items = ','.join(str(item) for item in items)
-    query = original_query[:-1]  # take the original query without the semicolon
-
-    new_query = query + f" and {column} in ({string_items});"
-
-    return new_query
-
-
 def create_trajectory_dict(timestamp: datetime, x: float, y: float) -> dict:
     return {'timestamp': timestamp, 'point': {'x': x, 'y': y}}
 
@@ -29,7 +15,7 @@ def map_user_to_device(records: list) -> dict:
     return {f"{device_id}": user_id for user_id, device_id in records}
 
 
-def group_records_by_column(records: list, group_by_column:int=0) -> list:
+def group_records_by_column(records: list, group_by_column: int = 0) -> list:
     """ Groups database records accordingly based on group_by_column
     @:param records: list of records (from database) for example: [(device_id, x, y, timestamp),...]
     @:param group_by_column: position of column by which to group by the values in the provided records

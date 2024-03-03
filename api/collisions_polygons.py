@@ -1,3 +1,6 @@
+from contextlib import asynccontextmanager
+
+import redis
 import sqlalchemy as db
 from sqlalchemy import select, exc
 from typing import List, Optional
@@ -5,37 +8,35 @@ from typing import List, Optional
 from fastapi import FastAPI, Query
 import psycopg2 as pg
 import json
-import schemas_collisions_polygons as _schemas
-from utils import map_user_to_device, group_records_by_column, add_to_select_in_list
-#from api.utils_api.utils import add_to_select_in_list, map_user_to_device, group_records_by_column
-#from api.utils_api.tables import users, polygons, polygons_category
-from sqlalchemy import String, DateTime, Boolean, ForeignKey, Table, Column, Integer, MetaData
+from schemas import schemas_collisions_polygons as _schemas
+from utils_api.utils import map_user_to_device, group_records_by_column
+from utils_api.database_utils import add_to_select_in_list, get_users_from_db
+from utils_api.database_utils import get_users_devices, get_polygons
+
 
 conn_str = 'user=admin password=quest host=127.0.0.1 port=8812 dbname=qdb'
 
-INTERNAL_SERVER_ERROR = 500
-api = FastAPI()
 
+redis_cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
 engine = db.create_engine("postgresql://postgres:password@localhost:25432/data")
 
-metadata = MetaData()
-users = Table('users', metadata,
-              Column('id', Integer, primary_key=True),
-              Column('device', Integer)
-              )
+INTERNAL_SERVER_ERROR = 500
 
-polygons_category = Table('category_polygons', metadata,
-                          Column('id', Integer, primary_key=True),
-                          Column('name', String))
+@asynccontextmanager
+async def lifespan(api: FastAPI):
+    # Load the cache
+    try:
+        records = get_users_from_db(engine)
+        keys = [str(key_value[0]) for key_value in records]
+        values = [str(key_value[1]) for key_value in records]
+        redis_cache.mset(dict(zip(keys, values)))
+    except exc.DataError as e:
+            pass
+    yield
+    # Clean cache
+    redis_cache.flushdb()
 
-polygons = Table('polygons', metadata,
-                 Column('id', Integer, primary_key=True),
-                 Column('creation', DateTime),
-                 Column('valid', Boolean),
-                 Column('category', Integer, ForeignKey('polygons_category.id')),
-                 Column('fence', String))
-
-
+api = FastAPI(lifespan=lifespan)
 
 def str_to_point(point: str):
     if point is not None:
@@ -46,20 +47,11 @@ def str_to_point(point: str):
 ## returns all polygons from database, can be filtered by category id
 @api.get("/polygons/", response_model=List[_schemas.Polygon])
 def polygons_on_map(valid: Optional[bool] = Query(None), category: Optional[int] = Query(None)):
-    query = select(
-        [polygons.c.id, polygons.c.creation, polygons.c.valid, polygons_category.c.name.label('category_name'),
-         polygons.c.fence]).select_from(
-        polygons.join(polygons_category, polygons.c.category == polygons_category.c.id)
-    )
-
-    if category is not None:  # category specified
-        query = query.where(polygons.c.category == category)
-    if valid is not None:
-        query = query.where(polygons.c.valid == valid)
-
-    with engine.connect() as conn:
-        result = conn.execute(query)
-        all_polygons = result.fetchall()
+    try:
+        all_polygons = get_polygons(engine, valid=valid, category=category)
+    except exc.DataError as e:
+        descr = str(e.__doc__) + str(e.orig)
+        return {"id": e.code, "description": descr, "http_response_code": INTERNAL_SERVER_ERROR}
 
     result = [_schemas.Polygon(id=row[0], creation=row[1], valid=row[2], category=row[3], fence=row[4]) for row in
               all_polygons]
@@ -68,24 +60,20 @@ def polygons_on_map(valid: Optional[bool] = Query(None), category: Optional[int]
 
 
 # Aké jednotky sa nachádzali v oblasti definovanej polygonom v určitom časovom okne
+# (for format see https://questdb.io/docs/reference/sql/where/#timestamp-and-date)
 @api.get("/collisions/history/", response_model=_schemas.CollisionsWithTimeQuery)
-def history_collisions(time: str, polygons: Optional[List[int]] = Query(None, title="Polygons ids"),
+def history_collisions(time: Query(..., title="Time", description="The time parameter specifying the time range for querying collisions. See https://questdb.io/docs/reference/sql/where/#timestamp-and-date "),
+                       polygons: Optional[List[int]] = Query(None, title="Polygons ids"),
                        user: Optional[List[int]] = Query(None, title="User ids")):
-    # get ids of devices based on users
-    with engine.connect() as conn:
-        try:
-            s = select([users])
-            # if users are specified, query only the results that match
-            if user:
-                s = s.where(users.c.id.in_(user))
-            result = conn.execute(s)
-            records_user_device = result.fetchall()
 
-        except exc.DataError as e:
-            descr = str(e.__doc__) + str(e.orig)
-            return {"id": e.code, "description": descr, "http_response_code": INTERNAL_SERVER_ERROR}
+    try:
+        # get ids of devices based on users
+        users_devices = get_users_devices(user, engine, redis_cache)
+    except exc.DataError as e:
+        descr = str(e.__doc__) + str(e.orig)
+        return {"id": e.code, "description": descr, "http_response_code": INTERNAL_SERVER_ERROR}
 
-    mapping = map_user_to_device(records_user_device)  # map the user id to device id
+    mapping = map_user_to_device(users_devices)  # map the user id to device id
 
     query = f"SELECT * FROM collisions_table where collision_date_in in \'{time}\';"
 
@@ -93,15 +81,16 @@ def history_collisions(time: str, polygons: Optional[List[int]] = Query(None, ti
         query = add_to_select_in_list(query, polygons, "polygon")
 
     if user:  # create select query with specified users
-        keys = [device[1] for device in records_user_device]  # get device keys
+        keys = [device[1] for device in users_devices]  # get device keys
         query = add_to_select_in_list(query, keys, "device")
 
     with pg.connect(conn_str) as connection:
         with connection.cursor() as cur:
             cur.execute(query)
             records = cur.fetchall()
-            # TODO urobit zgrupene podla user_id
+
             grouped = group_records_by_column(records, 0)
+
             r = [{'id_user': mapping[str(id_device)], 'id_device': id_device,
                   'collisions': [{'id_polygon': rec[1], 'inside': rec[2],  'enter_date': rec[3],
                                   'exit_date': rec[4], 'enter_point': str_to_point(rec[5]), 'exit_point': str_to_point(rec[6])} for rec in
@@ -123,20 +112,14 @@ def history_collisions(time: str, polygons: Optional[List[int]] = Query(None, ti
 @api.get("/collisions/current/", response_model=List[_schemas.InsideOfPolygon])
 def currently_in_polygon(polygons: Optional[List[int]] = Query(None, title="Polygons ids"),
                          user: Optional[List[int]] = Query(None, title="User ids")):
-    with engine.connect() as conn:
-        try:
-            s = select([users])
-            # if users are specified, query only the results that match
-            if user:
-                s = s.where(users.c.id.in_(user))
-            result = conn.execute(s)
-            records_user_device = result.fetchall()
+    try:
+        # get ids of devices based on users
+        users_devices = get_users_devices(user, engine, redis_cache)
+    except exc.DataError as e:
+        descr = str(e.__doc__) + str(e.orig)
+        return {"id": e.code, "description": descr, "http_response_code": INTERNAL_SERVER_ERROR}
 
-        except exc.DataError as e:
-            descr = str(e.__doc__) + str(e.orig)
-            return {"id": e.code, "description": descr, "http_response_code": INTERNAL_SERVER_ERROR}
-
-    mapping = map_user_to_device(records_user_device)  # map the user id to device id
+    mapping = map_user_to_device(users_devices)  # map the user id to device id
 
     query = f"SELECT device, polygon, collision_date_in FROM collisions_table where inside = true;"
 
@@ -144,7 +127,7 @@ def currently_in_polygon(polygons: Optional[List[int]] = Query(None, title="Poly
         query = add_to_select_in_list(query, polygons, "polygon")
 
     if user:  # create select query with specified users
-        keys = [device[1] for device in records_user_device]  # get device keys
+        keys = [device[1] for device in users_devices]  # get device keys
         query = add_to_select_in_list(query, keys, "device")
 
     with pg.connect(conn_str) as connection:
