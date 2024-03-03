@@ -214,6 +214,20 @@ services:
       - "8102:8102"
     networks:
       - internal_network
+  nginx:
+    container_name: "nginx"
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "8088:80"
+    depends_on:
+      - api_collisions
+      - api_historical
+      - api_realtime
+    networks:
+      - internal_network
 networks:
   internal_network:
     driver: bridge
