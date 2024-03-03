@@ -65,9 +65,11 @@ services:
     build:
       dockerfile: ./docker/Dockerfile_connect
       context: .
+    ports:
+      - "8083:8083"
     depends_on:
-      - kafka1
       - questdb
+      - kafka1
     links:
       - kafka1:kafka1
       - questdb:questdb
