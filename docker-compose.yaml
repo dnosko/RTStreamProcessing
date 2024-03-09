@@ -125,7 +125,6 @@ services:
     container_name: "postgis"
     volumes:
       - ./postgis_data:/var/lib/postgresql
-      - ./docker/init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
     environment:
       - POSTGRES_DB=data
       - POSTGRES_USER=postgres
