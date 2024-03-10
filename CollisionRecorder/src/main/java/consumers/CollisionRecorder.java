@@ -47,7 +47,8 @@ public class CollisionRecorder {
         consumer_props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumer_props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumer_props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-
+        consumer_props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
+        
         /**********************************************************/
 
         final Consumer<String, String> consumer = new KafkaConsumer<>(consumer_props);
@@ -104,6 +105,9 @@ public class CollisionRecorder {
                         TopicPartition partitionToSeek = new TopicPartition(topic, partition);
                         consumer.seek(partitionToSeek, offset);
                     }
+                }
+                catch (Exception e){
+                    e.printStackTrace();
                 }
             }
         }

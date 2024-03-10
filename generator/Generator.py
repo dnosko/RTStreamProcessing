@@ -13,8 +13,8 @@ import json
 class Generator:
     # Default values
     DEVICES = list(range(0, 5000, 1))
-    LIMIT_X = 10.0
-    LIMIT_Y = 10.0
+    LIMIT_X = 100.0
+    LIMIT_Y = 100.0
     URI = "ws://0.0.0.0:8001"
 
     STOP = False

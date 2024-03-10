@@ -21,6 +21,7 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 
 import org.apache.flink.types.Row;
+import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.sedona.flink.SedonaContext;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -64,7 +65,7 @@ public class CollisionTracker {
         // set up flink's stream environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.enableCheckpointing(CHECKPOINTING_INTERVAL_MS);
-        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(CHECKPOINTING_INTERVAL_MS);
+        //env.getCheckpointConfig().setMinPauseBetweenCheckpoints(CHECKPOINTING_INTERVAL_MS);
         env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
 
         env.getCheckpointConfig().setCheckpointTimeout(CHECKPOINTING_INTERVAL_MS*4);
@@ -81,7 +82,7 @@ public class CollisionTracker {
         .setTopics(inputTopic)
         .setGroupId(groupID)
         .setProperty("partition.discovery.interval.ms", "10000") // Dynamic Partition Discovery for scaling out topics
-        .setStartingOffsets(OffsetsInitializer.earliest()) // neskor zmenit na OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)
+        .setStartingOffsets(OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)) // neskor zmenit na OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)
         .setValueOnlyDeserializer(new SimpleStringSchema())
         .build();
 
@@ -116,7 +117,9 @@ public class CollisionTracker {
             // it's enough to keep only id of polygon at this point, the geometry isn't needed anymore, for locations all columns are needed
             Table dropPolygonCol = joined.dropColumns($(polygonColNames[1]));
 
+
             DataStream<Row> resultStream = sedona.toDataStream(dropPolygonCol);
+            //resultStream.print();
 
             // group stream by device_id and produce collision events in json format
             DataStream<String> collisionsEvents = resultStream.keyBy(r -> (Integer) r.getField(1))
@@ -135,11 +138,12 @@ public class CollisionTracker {
                     .setRecordSerializer(KafkaRecordSerializationSchema.builder()
                             .setTopic(outputTopic)
                             .setValueSerializationSchema(new SimpleStringSchema())
-                            .setKeySerializationSchema(new SimpleStringSchema())
+                            .setKeySerializationSchema(new MD5KeySerializationSchema())
                             .build()
                     )
                     .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
-                    .setProperty("transaction.timeout.ms", "10000")
+                    .setProperty("transaction.timeout.ms", "60000")
+                    .setProperty("enable.idempotence", "true")
                     .setTransactionalIdPrefix("flink-app1-")
                     .build();
 
