@@ -4,8 +4,13 @@
 ``docker compose build`` \
 ``docker compose up`` \
 
-Then connector creation is needed:
+### Then questDB connector creation is needed:
 ``python create_kafka_questdb_connector.py`` \
+
+## Important links: 
+QuestDB: http://localhost:9000/ \
+API: http://127.0.0.1:8088/  \
+Kafka UI: http://localhost:8080/
 
 ### 1. Apache Kafka
 First start Apache Kafka and QuestDB through docker. \
