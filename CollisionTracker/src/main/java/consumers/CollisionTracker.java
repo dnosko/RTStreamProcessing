@@ -33,7 +33,7 @@ import static org.apache.flink.table.api.Expressions.*;
 @Slf4j
 public class CollisionTracker {
     static String JOB_NAME = "Collision Tracker";
-    public static final int CHECKPOINTING_INTERVAL_MS = 5000;
+    public static final int CHECKPOINTING_INTERVAL_MS = 1000;
     static final String polygonsTable = "polygons";
     static final String inputTopic = "new_locations";
     static final String outputTopic = "collisions";
@@ -65,7 +65,7 @@ public class CollisionTracker {
         // set up flink's stream environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.enableCheckpointing(CHECKPOINTING_INTERVAL_MS);
-        //env.getCheckpointConfig().setMinPauseBetweenCheckpoints(CHECKPOINTING_INTERVAL_MS);
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(CHECKPOINTING_INTERVAL_MS);
         env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
 
         env.getCheckpointConfig().setCheckpointTimeout(CHECKPOINTING_INTERVAL_MS*4);
@@ -144,6 +144,7 @@ public class CollisionTracker {
                     .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                     .setProperty("transaction.timeout.ms", "60000")
                     .setProperty("enable.idempotence", "true")
+                    .setProperty("cleanup.policy", "compact,delete")
                     .setTransactionalIdPrefix("flink-app1-")
                     .build();
 
