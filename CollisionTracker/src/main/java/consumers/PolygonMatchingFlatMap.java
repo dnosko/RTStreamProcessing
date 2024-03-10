@@ -41,7 +41,7 @@ public class PolygonMatchingFlatMap extends RichFlatMapFunction<Row, PolygonOutp
         // copy the old list to a new one
         for (Integer v : currentlyInPolygons) {
             currentList.add(v);
-            System.out.println(deviceID + ":" + v);
+            //System.out.println(deviceID + ":" + v);
         }
 
 
