@@ -1,0 +1,59 @@
+plugins {
+    // Apply the java plugin to add support for Java
+    id 'java'
+    // Apply the application plugin to add support for building an application
+    id 'application'
+    // Apply the Maven publish plugin to publish resulting artefacts into a Maven repository
+    id 'maven-publish'
+    // Apply the shadow plugin to produce fat JARs
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = "collisionRecorder"
+version = "1.0-SNAPSHOT"
+mainClassName = 'consumers.CollisionRecorder'
+
+repositories {
+    mavenCentral()
+
+}
+
+dependencies {
+    implementation group: 'org.slf4j', name: 'slf4j-nop', version: '2.0.3'
+    implementation group: 'org.apache.kafka', name: 'kafka-clients', version: '3.4.0'
+    implementation 'org.questdb:questdb:7.3.10'
+    implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.2'
+    // needed if OAuth is used; otherwise this can be left out.
+    // See: https://docs.confluent.io/platform/current/kafka/authentication_sasl/authentication_sasl_oauth.html
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.15.2'
+}
+
+compileJava {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+
+run {
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+// https://imperceptiblethoughts.com/shadow/configuration/reproducible-builds/
+tasks.withType(AbstractArchiveTask) {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+jar {
+    manifest {
+        attributes(
+                "Class-Path": configurations.compileClasspath.collect { it.getName() }.join(" "),
+        "Main-Class": "consumers.CollisionRecorder"
+        )
+    }
+}
+
+shadowJar {
+    archiveBaseName = "collision-recorder"
+    archiveClassifier = ''
+}

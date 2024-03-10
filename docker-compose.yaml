@@ -48,6 +48,7 @@ services:
       - zookeeper
     links:
       - zookeeper:zookeeper
+    restart: on-failure
     environment:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -114,6 +115,7 @@ services:
     links:
       - kafka1:kafka1
       - redis:redis
+    restart: on-failure
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -151,6 +153,21 @@ services:
     restart: on-failure
     depends_on:
       questdb:
+        condition: service_started
+      kafka1:
+        condition: service_started
+    networks:
+      - internal_network
+  collisiontracker:
+    container_name: "collision_tracker"
+    build:
+      dockerfile: ./docker/Dockerfile_collisions_tracker
+      context: .
+    ports:
+      - '8082:8082'
+    restart: on-failure
+    depends_on:
+      postgres:
         condition: service_started
       kafka1:
         condition: service_started

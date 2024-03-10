@@ -17,30 +17,31 @@ mainClassName = 'consumers.CollisionTracker'
 
 repositories {
     mavenCentral()
+    maven { url 'https://maven.geo-solutions.it/' }
 }
+
 
 dependencies {
 
-    implementation 'org.apache.flink:flink-clients:1.18.0'
-    //implementation "org.apache.flink:flink-streaming-java:1.18.0"
-    implementation 'org.apache.flink:flink-connector-kafka:3.1.0-1.18'
-    implementation "org.apache.flink:flink-streaming-java:1.18.0"
-    implementation "org.apache.flink:flink-connector-files:1.18.0"
-    implementation group: 'org.apache.flink', name: 'flink-json', version: '1.18.0'
-    implementation group: 'org.apache.flink', name: 'flink-table-api-java-bridge', version: '1.18.0'
+    implementation group: 'org.apache.flink', name: 'flink-clients', version: '1.18.0'
+    implementation group: 'org.apache.flink', name: 'flink-connector-kafka', version: '3.1.0-1.18'
+    implementation 'org.apache.flink:flink-connector-files:1.18.0'
     implementation group: 'org.apache.flink', name: 'flink-table-planner_2.12', version: '1.18.0'
+    //implementation group: 'org.apache.flink', name: 'flink-table-planner-blink_2.12', version: '1.13.6'
+    implementation group: 'org.apache.flink', name: 'flink-csv', version: '1.18.0'
+    implementation group: 'org.apache.flink', name: 'flink-json', version: '1.18.0'
+    
+    implementation group: 'org.apache.flink', name: 'flink-table-api-java-bridge', version: '1.18.0'
 
-
-    implementation 'org.slf4j:slf4j-api:1.7.36'
-    //implementation group: 'org.apache.sedona', name: 'sedona-flink-shaded_2.12', version: '1.5.1'
-    implementation group: 'org.apache.sedona', name: 'sedona-flink_2.12', version: '1.5.1'
+    implementation group: 'org.apache.sedona', name: 'sedona-flink_2.12', version: '1.5.0'
     implementation group: 'org.datasyslab', name: 'geotools-wrapper', version: '1.5.1-28.2'
-
     implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.2'
 
+    implementation 'org.slf4j:slf4j-api:1.7.36'
 
 
-    compileOnly 'org.projectlombok:lombok:1.18.22'
+    implementation 'org.projectlombok:lombok:1.18.22'
+
 
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -54,7 +55,7 @@ dependencies {
 configurations {
     flinkShadowJar // dependencies which go into the shadowJar
     // always exclude these (also from transitive dependencies) since they are provided by Flink
-    flinkShadowJar.exclude group: 'org.apache.flink', module: 'force-shading'
+    //flinkShadowJar.exclude group: 'org.apache.flink', module: 'force-shading'
     flinkShadowJar.exclude group: 'com.google.code.findbugs', module: 'jsr305'
     flinkShadowJar.exclude group: 'org.slf4j'
     flinkShadowJar.exclude group: 'org.apache.logging.log4j'
@@ -87,27 +88,23 @@ tasks.test {
     useJUnitPlatform()
 }
 
-// https://imperceptiblethoughts.com/shadow/configuration/reproducible-builds/
-tasks.withType(AbstractArchiveTask) {
-    preserveFileTimestamps = false
-    reproducibleFileOrder = true
-}
 
 jar {
     manifest {
-        attributes 'Built-By': System.getProperty('user.name'), 'Build-Jdk': System.getProperty('java.version'), 'Main-Class': mainClassName
+        attributes 'Main-Class': mainClassName
     }
 }
 
 shadowJar {
     configurations = [project.configurations.flinkShadowJar, project.configurations.runtimeClasspath]
+    mergeServiceFiles()
     zip64 true
 }
 
-task fatJar(type: Jar) {
+tasks.register('fatJar', Jar) {
     manifest.from jar.manifest
     archiveClassifier = 'fat'
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE // allow duplicates
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE // dont allow duplicates
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     } {
