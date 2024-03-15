@@ -62,6 +62,16 @@ services:
       KAFKA_JMX_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka0 -Dcom.sun.management.jmxremote.rmi.port=9997
     networks:
       - internal_network
+  kafka-init:
+    image: confluentinc/cp-kafka:7.4.1
+    depends_on:
+      kafka1:
+        condition: service_started
+    command: "bash -c '/usr/bin/kafka_init.sh'"
+    volumes:
+      - ./docker/kafka_init.sh:/usr/bin/kafka_init.sh
+    networks:
+      - internal_network
   connect:
     image: kafka-connect-with-questdb
     build:
