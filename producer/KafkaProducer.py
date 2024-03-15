@@ -5,25 +5,31 @@ from confluent_kafka import Producer, KafkaException
 
 class KafkaProducer:
 
-    def __init__(self, topic, server, client_id):
+    def __init__(self, topic, server):
         self.topic = topic
         self.server = server
-        self.client_id = client_id
         self.config = {
             'bootstrap.servers': self.server,
-            'client.id': self.client_id
+            'retries': 10,
+            'acks': 'all',
+            'enable.idempotence': True
         }
         self.producer = Producer(self.config)
 
     def produce_msg(self, msg):
         try:
             load_msg = json.loads(msg)
-            self.producer.produce(self.topic, value=msg, key=str(load_msg['id']).encode('utf-8'))
+            self.producer.produce(self.topic, value=msg, key=str(load_msg['id']).encode('utf-8'),  callback=self.delivery_report)
         except KafkaException as e:
             print(f"Failed to produce message: {e}")
 
-    def flush(self, timeout=10.0):
-        self.producer.flush(timeout=timeout)
+    @staticmethod
+    def delivery_report(err, msg):
+        if err is not None:
+            print(f"Message delivery failed: {err}")
+
+    def flush(self):
+        self.producer.flush()
 
     def stop_producing(self):
         self.producer.flush()

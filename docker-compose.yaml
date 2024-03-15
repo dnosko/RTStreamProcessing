@@ -50,8 +50,10 @@ services:
       - zookeeper:zookeeper
     restart: on-failure
     environment:
+      KAFKA_BROKER_ID: 1 
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
       #KAFKA_JMX_HOSTNAME: ${DOCKER_HOST_IP:-127.0.0.1}
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka1:19092,EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9092,DOCKER://host.docker.internal:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,DOCKER:PLAINTEXT
@@ -137,8 +139,6 @@ services:
     ports:
         - "25432:5432"
     restart: on-failure
-    healthcheck:
-        test: "pg_isready -U postgres -h localhost -p 25432 -d data"
     networks:
       - internal_network
   collisionrecorder:
@@ -155,6 +155,8 @@ services:
       questdb:
         condition: service_started
       kafka1:
+        condition: service_started
+      postgres:
         condition: service_started
     networks:
       - internal_network

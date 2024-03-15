@@ -80,9 +80,9 @@ public class CollisionTracker {
         KafkaSource<String> source = KafkaSource.<String>builder()
         .setBootstrapServers(kafkaServer)
         .setTopics(inputTopic)
-        .setGroupId(groupID)
+        .setGroupId("collision-tracker")
         .setProperty("partition.discovery.interval.ms", "10000") // Dynamic Partition Discovery for scaling out topics
-        .setStartingOffsets(OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)) // neskor zmenit na OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)
+        .setStartingOffsets(OffsetsInitializer.earliest()) // neskor zmenit na OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)
         .setValueOnlyDeserializer(new SimpleStringSchema())
         .build();
 

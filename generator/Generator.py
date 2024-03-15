@@ -1,3 +1,4 @@
+import time
 from typing import Dict
 
 import websockets
@@ -16,6 +17,8 @@ class Generator:
     LIMIT_X = 100.0
     LIMIT_Y = 100.0
     URI = "ws://0.0.0.0:8001"
+    LIMIT_CNT = 1000000
+    start_ts = 0
 
     STOP = False
 
@@ -24,6 +27,7 @@ class Generator:
         self.limitX = limitX
         self.limitY = limitY
         self.uri = uri
+        self.cnt = 0
         self.websocket = None
 
     async def hello(self):
@@ -45,14 +49,35 @@ class Generator:
                 "timestamp": timestamp}
         return data
 
+    def gen_data(self):
+        self.cnt += 1
+        data = self.generate_mock_data()
+        if self.cnt == 1:
+            self.start_ts = time.time()
+            print(f"Starting generating at {self.start_ts}")
+        elif self.cnt == self.LIMIT_CNT:
+            end_ts = time.time()
+            print(end_ts)
+            print(f"Generated 1 million messages in {end_ts - self.start_ts} seconds")
+        return json.dumps(data)
+
     async def send_data(self):
         """ Sends periodically random mock data to websocket server."""
+        if self.cnt == 0:
+            self.start_ts = time.time()
+            print(f"Starting generating at {self.start_ts}")
         try:
             if self.websocket:
                 while not self.STOP:
                     data = self.generate_mock_data()
                     data_str = json.dumps(data)
                     await self.websocket.send(data_str)
+                    self.cnt += 1
+                    if self.cnt == self.LIMIT_CNT:
+                        await self.stop()
+                        end_ts = time.time()
+                        print(end_ts)
+                        print(f"Generated 1 million messages in {end_ts - self.start_ts} seconds")
             else:
                 print("Connection not established.")
         except websockets.exceptions.ConnectionClosedError:
