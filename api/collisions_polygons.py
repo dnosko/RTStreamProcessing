@@ -5,27 +5,28 @@ from itertools import groupby
 from operator import itemgetter
 import redis
 import sqlalchemy as db
-from sqlalchemy import select, exc
+from sqlalchemy import exc
 from typing import List, Optional
 from pymongo import MongoClient, ASCENDING
 from fastapi import FastAPI, Query
-import psycopg2 as pg
+
 import json
 from schemas import schemas_collisions_polygons as _schemas
-from utils_api.utils import map_user_to_device, group_records_by_column
-from utils_api.database_utils import add_to_select_in_list, get_users_from_db
+from utils_api.utils import map_user_to_device
+from utils_api.database_utils import get_users_from_db
 from utils_api.database_utils import get_users_devices, get_polygons
 
-conn_str = 'user=admin password=quest host=questdb port=8812 dbname=qdb'
-conn_str_mongodb = "mongodb://user:pass@localhost:7017"
+
+#conn_str_mongodb = "mongodb://user:pass@localhost:7017"
+conn_str_mongodb = "mongodb://user:pass@mongodb:27017"
 client_mongodb = MongoClient(conn_str_mongodb)
 mongo_db = client_mongodb["db"]
 collisions_collection = mongo_db["collisions"]
 
-# redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
-redis_cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
-# engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
-engine = db.create_engine("postgresql://postgres:password@0.0.0.0:25432/data")
+redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
+#redis_cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
+engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
+#engine = db.create_engine("postgresql://postgres:password@0.0.0.0:25432/data")
 
 INTERNAL_SERVER_ERROR = 500
 
@@ -136,25 +137,25 @@ def currently_in_polygon(polygons: Optional[List[int]] = Query(None, title="Poly
         return {"id": e.code, "description": descr, "http_response_code": INTERNAL_SERVER_ERROR}
 
     mapping = map_user_to_device(users_devices)  # map the user id to device id
-
-    query = f"SELECT device, polygon, collision_date_in FROM collisions_table where inside = true;"
+    query_filter = {"inside": True}
+    # query = f"SELECT device, polygon, collision_date_in FROM collisions_table where inside = true;"
 
     if polygons:  # create select query with specified polygons
-        query = add_to_select_in_list(query, polygons, "polygon")
+        query_filter["polygon"] = {"$in": polygons}
 
     if user:  # create select query with specified users
-        keys = [device[1] for device in users_devices]  # get device keys
-        query = add_to_select_in_list(query, keys, "device")
+        keys = [int(device[1]) for device in users_devices]  # get device keys
+        query_filter["device"] = {"$in": keys}
 
-    with pg.connect(conn_str) as connection:
-        with connection.cursor() as cur:
-            cur.execute(query)
-            records = cur.fetchall()
+    filtered_documents = collisions_collection.find(query_filter)
+    filtered_documents.sort('device', ASCENDING)
 
-            grouped = group_records_by_column(records, 0)
-            r = [{'id_user': mapping[str(id_device)], 'id_device': id_device,
-                  'collisions': [{'id_polygon': polygon, 'enter_date': date_in} for id_device, polygon, date_in in
-                                 rest_of_record]}
-                 for id_device, rest_of_record in grouped]
+    # Group records by the specified attribute
+    grouped_records = {key: list(group) for key, group in groupby(filtered_documents, key=itemgetter('device'))}
+
+    r = [{'id_user': mapping[str(device)], 'id_device': device,
+          'collisions': [{'id_polygon': rec['polygon'], 'enter_date': rec['collision_date_in']} for rec in
+                         records]}
+         for device, records in grouped_records.items()]
 
     return r
