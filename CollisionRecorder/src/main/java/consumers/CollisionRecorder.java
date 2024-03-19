@@ -79,6 +79,8 @@ public class CollisionRecorder {
         MongoDatabase database = mongoClient.getDatabase("db");
         MongoCollection<Document> collection = database.getCollection("collisions");
 
+        ObservableSubscriber<UpdateResult> subscriberUpdate = new ObservableSubscriber<UpdateResult>();
+        ObservableSubscriber<InsertOneResult> subscriberInsert = new ObservableSubscriber<InsertOneResult>();
 
         try {
             consumer.subscribe(Arrays.asList(topic));
@@ -95,11 +97,11 @@ public class CollisionRecorder {
 
 
                         if (typeOfRecord.equals("enter")){ // enter polygon, create new record
-                            insertNewRecord(collection, jsonRecord);
+                            insertNewRecord(collection, jsonRecord, subscriberInsert);
                         }
                         else {
                             // exit polygon, update record
-                            updateExistingRecord(collection, jsonRecord);
+                            updateExistingRecord(collection, jsonRecord, subscriberUpdate);
                         }
                     }
                 } catch (KafkaException e) {
@@ -124,6 +126,7 @@ public class CollisionRecorder {
         }
         finally {
             consumer.close();
+            mongoClient.close();
         }
     }
 
@@ -135,7 +138,7 @@ public class CollisionRecorder {
     }
 
     /** Inserts new collision to database. */
-    private static void insertNewRecord(MongoCollection<Document> collection, JsonNode record) {
+    private static void insertNewRecord(MongoCollection<Document> collection, JsonNode record, ObservableSubscriber<InsertOneResult> subscriberInsert) {
         long date_in = record.get("collision_date_in").asLong(); // convert from milli to micro seconds
         int polygon = record.get("polygon").asInt();
         int device =  record.get("device").asInt();
@@ -152,13 +155,13 @@ public class CollisionRecorder {
                 .append("collision_point_out",null)
                 .append("collision_date_out",null);
 
-        collection.insertOne(document).subscribe(new ObservableSubscriber<InsertOneResult>());
+        collection.insertOne(document).subscribe(subscriberInsert);
 
 
     }
 
     /** Updates collision record when the device exits polygon. */
-    private static void updateExistingRecord(MongoCollection<Document> collection, JsonNode record){
+    private static void updateExistingRecord(MongoCollection<Document> collection, JsonNode record, ObservableSubscriber<UpdateResult> subscriberUpdate){
         long date_out = record.get("collision_date_out").asLong();
         int polygon = record.get("polygon").asInt();
         int device =  record.get("device").asInt();
@@ -175,7 +178,7 @@ public class CollisionRecorder {
                 .append("collision_date_out", date_ts)
                 .append("collision_point_out", geoPoint));
 
-        collection.updateOne(filter, update).subscribe(new ObservableSubscriber<UpdateResult>());;
+        collection.updateOne(filter, update).subscribe(subscriberUpdate);;
     }
 
     /** Map function to convert String to Json */

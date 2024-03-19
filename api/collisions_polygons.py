@@ -19,9 +19,9 @@ from utils_api.database_utils import get_users_devices, get_polygons
 
 #conn_str_mongodb = "mongodb://user:pass@localhost:7017"
 conn_str_mongodb = "mongodb://user:pass@mongodb:27017"
-client_mongodb = MongoClient(conn_str_mongodb)
-mongo_db = client_mongodb["db"]
-collisions_collection = mongo_db["collisions"]
+#client_mongodb = MongoClient(conn_str_mongodb)
+#mongo_db = client_mongodb["db"]
+#collisions_collection = mongo_db["collisions"]
 
 redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
 #redis_cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
@@ -33,6 +33,11 @@ INTERNAL_SERVER_ERROR = 500
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
+
+    client_mongodb = MongoClient(conn_str_mongodb)
+    mongo_db = client_mongodb["db"]
+    global collisions_collection
+    collisions_collection = mongo_db["collisions"]
     # Load the cache
     try:
         records = get_users_from_db(engine)
