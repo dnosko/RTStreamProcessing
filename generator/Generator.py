@@ -16,7 +16,7 @@ class Generator:
     DEVICES = list(range(0, 5000, 1))
     LIMIT_X = 100.0
     LIMIT_Y = 100.0
-    URI = "ws://0.0.0.0:8001"
+    URI = "ws://localhost:8088/ws"
     LIMIT_CNT = 1000000
     start_ts = 0
 

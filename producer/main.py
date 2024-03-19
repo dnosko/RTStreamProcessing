@@ -9,8 +9,8 @@ async def main():
     ws = ServerWS()
 
     try:
-        #await ws.run()
-        ws.gen_message()
+        await ws.run()
+        #ws.gen_message()
     except Exception:
         traceback.print_exc()
     finally:
