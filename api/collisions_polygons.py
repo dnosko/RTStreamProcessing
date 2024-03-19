@@ -16,19 +16,19 @@ from utils_api.utils import map_user_to_device, group_records_by_column
 from utils_api.database_utils import add_to_select_in_list, get_users_from_db
 from utils_api.database_utils import get_users_devices, get_polygons
 
-
 conn_str = 'user=admin password=quest host=questdb port=8812 dbname=qdb'
-conn_str_mongodb = "mongodb://user:pass@localhost:27017"
+conn_str_mongodb = "mongodb://user:pass@localhost:7017"
 client_mongodb = MongoClient(conn_str_mongodb)
 mongo_db = client_mongodb["db"]
 collisions_collection = mongo_db["collisions"]
 
-#redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
+# redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
 redis_cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
-#engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
+# engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
 engine = db.create_engine("postgresql://postgres:password@0.0.0.0:25432/data")
 
 INTERNAL_SERVER_ERROR = 500
+
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
@@ -45,7 +45,9 @@ async def lifespan(api: FastAPI):
     # Clean cache
     redis_cache.flushdb()
 
+
 api = FastAPI(lifespan=lifespan)
+
 
 def str_to_point(point: str):
     if point is not None:
@@ -71,10 +73,10 @@ def polygons_on_map(valid: Optional[bool] = Query(None), category: Optional[int]
 # Aké jednotky sa nachádzali v oblasti definovanej polygonom v určitom časovom okne
 # (for format see https://questdb.io/docs/reference/sql/where/#timestamp-and-date)
 @api.get("/collisions/history/", response_model=_schemas.CollisionsWithTimeQuery)
-def history_collisions(time: str = Query(..., title="Time", description="The time parameter specifying the time range for querying collisions. Please split the from and to time with ;"),
+def history_collisions(time: str = Query(..., title="Time",
+                                         description="The time parameter specifying the time range for querying collisions. Please split the from and to time with ;"),
                        polygons: Optional[List[int]] = Query(None, title="Polygons ids"),
                        user: Optional[List[int]] = Query(None, title="User ids")):
-
     try:
         # get ids of devices based on users
         users_devices = get_users_devices(user, engine, redis_cache)
@@ -99,9 +101,8 @@ def history_collisions(time: str = Query(..., title="Time", description="The tim
     if polygons:  # create select query with specified polygons
         query_filter["polygon"] = {"$in": polygons}
 
-
     if user:  # create select query with specified users
-        keys = [device[1] for device in users_devices]  # get device keys
+        keys = [int(device[1]) for device in users_devices]  # get device keys
         query_filter["device"] = {"$in": keys}
 
     filtered_documents = collisions_collection.find(query_filter)
@@ -115,7 +116,9 @@ def history_collisions(time: str = Query(..., title="Time", description="The tim
           'collisions': [{'id_polygon': rec['polygon'], 'inside': rec['inside'], 'enter_date': rec['collision_date_in'],
                           'exit_date': rec['collision_date_out'],
                           'enter_point': rec['collision_point_in']['coordinates'],
-                          'exit_point': rec['collision_point_out']['coordinates']} for rec in records]}
+                          'exit_point': rec['collision_point_out']['coordinates'] if rec[
+                                                                                         'collision_point_out'] is not None else None}
+                         for rec in records]}
          for device, records in grouped_records.items()]
 
     return _schemas.CollisionsWithTimeQuery(time=time, collisions=r)
