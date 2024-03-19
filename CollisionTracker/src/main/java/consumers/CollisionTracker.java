@@ -150,7 +150,6 @@ public class CollisionTracker {
                     .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                     .setProperty("transaction.timeout.ms", "60000")
                     .setProperty("enable.idempotence", "true")
-                    .setProperty("cleanup.policy", "compact,delete")
                     .setTransactionalIdPrefix("flink-app1-")
                     .build();
 
