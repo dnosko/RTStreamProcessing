@@ -189,7 +189,7 @@ services:
         context: .
         dockerfile: docker/Dockerfile_api_collisions
     depends_on:
-        questdb:
+        mongodb:
           condition: service_started
         redis:
           condition: service_started

@@ -1,10 +1,13 @@
 from contextlib import asynccontextmanager
 import sys
+from datetime import datetime
+from itertools import groupby
+from operator import itemgetter
 import redis
 import sqlalchemy as db
 from sqlalchemy import select, exc
 from typing import List, Optional
-
+from pymongo import MongoClient, ASCENDING
 from fastapi import FastAPI, Query
 import psycopg2 as pg
 import json
@@ -15,10 +18,15 @@ from utils_api.database_utils import get_users_devices, get_polygons
 
 
 conn_str = 'user=admin password=quest host=questdb port=8812 dbname=qdb'
+conn_str_mongodb = "mongodb://user:pass@localhost:27017"
+client_mongodb = MongoClient(conn_str_mongodb)
+mongo_db = client_mongodb["db"]
+collisions_collection = mongo_db["collisions"]
 
-
-redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
-engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
+#redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
+redis_cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
+#engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
+engine = db.create_engine("postgresql://postgres:password@0.0.0.0:25432/data")
 
 INTERNAL_SERVER_ERROR = 500
 
@@ -63,7 +71,7 @@ def polygons_on_map(valid: Optional[bool] = Query(None), category: Optional[int]
 # Aké jednotky sa nachádzali v oblasti definovanej polygonom v určitom časovom okne
 # (for format see https://questdb.io/docs/reference/sql/where/#timestamp-and-date)
 @api.get("/collisions/history/", response_model=_schemas.CollisionsWithTimeQuery)
-def history_collisions(time: str = Query(..., title="Time", description="The time parameter specifying the time range for querying collisions. See https://questdb.io/docs/reference/sql/where/#timestamp-and-date "),
+def history_collisions(time: str = Query(..., title="Time", description="The time parameter specifying the time range for querying collisions. Please split the from and to time with ;"),
                        polygons: Optional[List[int]] = Query(None, title="Polygons ids"),
                        user: Optional[List[int]] = Query(None, title="User ids")):
 
@@ -76,36 +84,40 @@ def history_collisions(time: str = Query(..., title="Time", description="The tim
 
     mapping = map_user_to_device(users_devices)  # map the user id to device id
 
-    query = f"SELECT * FROM collisions_table where collision_date_in in \'{time}\';"
+    times = time.split(';')
+    start_time_str = times[0]
+    end_time_str = times[1] if len(times) > 1 and times[1] else None
+
+    # Convert start_time and optionally end_time to datetime
+    start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%S")
+    query_filter = {"collision_date_in": {"$gte": start_time}}
+
+    if end_time_str:
+        end_time = datetime.strptime(end_time_str, "%Y-%m-%dT%H:%M:%S")
+        query_filter["collision_date_in"]["$lte"] = end_time
 
     if polygons:  # create select query with specified polygons
-        query = add_to_select_in_list(query, polygons, "polygon")
+        query_filter["polygon"] = {"$in": polygons}
+
 
     if user:  # create select query with specified users
         keys = [device[1] for device in users_devices]  # get device keys
-        query = add_to_select_in_list(query, keys, "device")
+        query_filter["device"] = {"$in": keys}
 
-    with pg.connect(conn_str) as connection:
-        with connection.cursor() as cur:
-            cur.execute(query)
-            records = cur.fetchall()
+    filtered_documents = collisions_collection.find(query_filter)
 
-            grouped = group_records_by_column(records, 0)
+    filtered_documents.sort('device', ASCENDING)
 
-            r = [{'id_user': mapping[str(id_device)], 'id_device': id_device,
-                  'collisions': [{'id_polygon': rec[1], 'inside': rec[2],  'enter_date': rec[3],
-                                  'exit_date': rec[4], 'enter_point': str_to_point(rec[5]), 'exit_point': str_to_point(rec[6])} for rec in
-                                 rest_of_record]}
-                 for id_device, rest_of_record in grouped]
-            """result = [_schemas.Collision(id_user=mapping[str(row[0])],
-                                         id_device=row[0],
-                                         id_polygon=row[1],
-                                         inside=row[2],
-                                         enter_date=row[3],
-                                         exit_date=row[4],
-                                         enter_point=str_to_point(row[5]),
-                                         exit_point=str_to_point(row[6])
-                                         ) for row in records]"""
+    # Group records by the specified attribute
+    grouped_records = {key: list(group) for key, group in groupby(filtered_documents, key=itemgetter('device'))}
+
+    r = [{'id_user': mapping.get(str(device)), 'id_device': device,
+          'collisions': [{'id_polygon': rec['polygon'], 'inside': rec['inside'], 'enter_date': rec['collision_date_in'],
+                          'exit_date': rec['collision_date_out'],
+                          'enter_point': rec['collision_point_in']['coordinates'],
+                          'exit_point': rec['collision_point_out']['coordinates']} for rec in records]}
+         for device, records in grouped_records.items()]
+
     return _schemas.CollisionsWithTimeQuery(time=time, collisions=r)
 
 

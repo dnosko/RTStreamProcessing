@@ -12,7 +12,6 @@ import com.mongodb.client.model.geojson.Position;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.reactivestreams.client.MongoDatabase;
-import io.questdb.std.NumericException;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
@@ -136,7 +135,7 @@ public class CollisionRecorder {
     }
 
     /** Inserts new collision to database. */
-    private static void insertNewRecord(MongoCollection<Document> collection, JsonNode record) throws NumericException {
+    private static void insertNewRecord(MongoCollection<Document> collection, JsonNode record) {
         long date_in = record.get("collision_date_in").asLong(); // convert from milli to micro seconds
         int polygon = record.get("polygon").asInt();
         int device =  record.get("device").asInt();
@@ -150,8 +149,8 @@ public class CollisionRecorder {
                 .append("inside", in)
                 .append("collision_date_in", date_ts)
                 .append("collision_point_in",geoPoint)
-                .append("collision_date_in",null)
-                .append("collision_point_out",null);
+                .append("collision_point_out",null)
+                .append("collision_date_out",null);
 
         collection.insertOne(document).subscribe(new ObservableSubscriber<InsertOneResult>());
 

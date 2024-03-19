@@ -30,7 +30,7 @@ def get_users_devices(user: list, engine, redis_cache):
         devices = redis_cache.mget(user)
 
         users_devices = list(zip(user, devices))
-        print(users_devices)
+
     # if some values were none (not in cache), take these keys and ask database and add to cache, if user is empty list,
     # then all values from database table users should be loaded and cached.
     none_keys = [key for key, value in users_devices if value is None]
@@ -40,7 +40,6 @@ def get_users_devices(user: list, engine, redis_cache):
             # set missing values to redis
             try:
                 redis_cache.mset(dict(missing_values))
-                print(missing_values)
             except redis.exceptions.DataError as e:
                 print(e)
                 return [(key, value) for key, value in users_devices if value is not None]
