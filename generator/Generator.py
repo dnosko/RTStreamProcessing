@@ -17,18 +17,19 @@ class Generator:
     LIMIT_X = 100.0
     LIMIT_Y = 100.0
     URI = "ws://localhost:8088/ws"
-    LIMIT_CNT = 1000000
+    #LIMIT_CNT = 1000000
     start_ts = 0
 
     STOP = False
 
-    def __init__(self, devices=DEVICES, limitX=LIMIT_X, limitY=LIMIT_Y, uri=URI) -> None:
+    def __init__(self, devices=DEVICES, limitX=LIMIT_X, limitY=LIMIT_Y, uri=URI, limit_cnt=None) -> None:
         self.devices = devices
         self.limitX = limitX
         self.limitY = limitY
         self.uri = uri
         self.cnt = 0
         self.websocket = None
+        self.limit_cnt = limit_cnt
 
     async def hello(self):
         """ Initiates handshake with the websocket server. """
@@ -49,17 +50,22 @@ class Generator:
                 "timestamp": timestamp}
         return data
 
-    def gen_data(self):
-        self.cnt += 1
-        data = self.generate_mock_data()
-        if self.cnt == 1:
-            self.start_ts = time.time()
-            print(f"Starting generating at {self.start_ts}")
-        elif self.cnt == self.LIMIT_CNT:
-            end_ts = time.time()
-            print(end_ts)
-            print(f"Generated 1 million messages in {end_ts - self.start_ts} seconds")
-        return json.dumps(data)
+    def gen_data(self, limit):
+        """Function for generating mock data for testing purposes. """
+        while self.cnt < limit:
+            self.cnt += 1
+            data = self.generate_mock_data()
+
+            if self.cnt == 1:
+                self.start_ts = time.time()
+                print(f"Starting generating at {self.start_ts}")
+
+            yield json.dumps(data)
+
+            if self.cnt == limit:
+                end_ts = time.time()
+                print(end_ts)
+                print(f"Generated {limit} messages in {end_ts - self.start_ts} seconds")
 
     async def send_data(self):
         """ Sends periodically random mock data to websocket server."""
@@ -72,12 +78,14 @@ class Generator:
                     data = self.generate_mock_data()
                     data_str = json.dumps(data)
                     await self.websocket.send(data_str)
+                    await self.websocket.recv()
                     self.cnt += 1
-                    if self.cnt == self.LIMIT_CNT:
+                    # if max limit is set, stop generating after the limit
+                    if self.limit_cnt is not None and self.cnt == self.limit_cnt:
                         await self.stop()
                         end_ts = time.time()
                         print(end_ts)
-                        print(f"Generated 1 million messages in {end_ts - self.start_ts} seconds")
+                        print(f"Generated {self.limit_cnt} messages in {end_ts - self.start_ts} seconds")
             else:
                 print("Connection not established.")
         except websockets.exceptions.ConnectionClosedError:

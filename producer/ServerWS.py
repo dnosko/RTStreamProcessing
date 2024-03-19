@@ -19,6 +19,8 @@ class ServerWS:
         try:
             while True:
                 message = await websocket.recv()
+                reply = f"Data recieved"
+                await websocket.send(reply)
                 #message = self.generator.gen_data()
                 self.msg_counter += 1
                 print(self.msg_counter)
