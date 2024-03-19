@@ -1,14 +1,28 @@
 package consumers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerApi;
+import com.mongodb.ServerApiVersion;
+import com.mongodb.client.model.geojson.Point;
+import com.mongodb.client.model.geojson.Position;
+import com.mongodb.client.result.UpdateResult;
+import com.mongodb.client.result.InsertOneResult;
+import com.mongodb.reactivestreams.client.MongoDatabase;
 import io.questdb.std.NumericException;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
+
+import com.mongodb.reactivestreams.client.MongoClients;
+import com.mongodb.reactivestreams.client.MongoClient;
+import com.mongodb.reactivestreams.client.MongoCollection;
+
+import org.bson.Document;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -34,7 +48,7 @@ public class CollisionRecorder {
 
         /************************ Config ***************************/
 
-        String questUrl = config.getProperty("quest_db");
+        String mongoDbConnStr = config.getProperty("mongodb");
         String kafkaServer = config.getProperty("kafka_server");
         String kafkaGroup = config.getProperty("group_id_config");
         String topic = config.getProperty("topic_name");
@@ -53,23 +67,18 @@ public class CollisionRecorder {
 
         final Consumer<String, String> consumer = new KafkaConsumer<>(consumer_props);
 
-        Properties questProps = new Properties();
-        questProps.setProperty("user", "admin");
-        questProps.setProperty("password", "quest");
-        questProps.setProperty("sslmode", "disable");
-
-        final Connection connection = DriverManager.getConnection(
-                questUrl, questProps);
-        connection.setAutoCommit(false);
-
-
-        // create table
-        final PreparedStatement statement = connection.prepareStatement(
-                "CREATE TABLE IF NOT EXISTS collisions_table (" +
-                        "device int, polygon int, inside boolean, collision_date_in timestamp, collision_date_out timestamp , " +
-                        "collision_point_in STRING, collision_point_out STRING" +
-                        ") TIMESTAMP(collision_date_in) PARTITION BY DAY WAL;");
-        statement.execute();
+        ConnectionString connString = new ConnectionString(mongoDbConnStr);
+        // Set the Stable API version on the client.
+        ServerApi serverApi = ServerApi.builder()
+                .version(ServerApiVersion.V1)
+                .build();
+        MongoClientSettings settings = MongoClientSettings.builder()
+                .applyConnectionString(connString)
+                .serverApi(serverApi)
+                .build();
+        MongoClient mongoClient = MongoClients.create(settings);
+        MongoDatabase database = mongoClient.getDatabase("db");
+        MongoCollection<Document> collection = database.getCollection("collisions");
 
 
         try {
@@ -87,11 +96,11 @@ public class CollisionRecorder {
 
 
                         if (typeOfRecord.equals("enter")){ // enter polygon, create new record
-                            insertNewRecord(connection, jsonRecord);
+                            insertNewRecord(collection, jsonRecord);
                         }
                         else {
                             // exit polygon, update record
-                            updateExistingRecord(connection, jsonRecord);
+                            updateExistingRecord(collection, jsonRecord);
                         }
                     }
                 } catch (KafkaException e) {
@@ -119,65 +128,55 @@ public class CollisionRecorder {
         }
     }
 
-    /** Maps json inner dictionary to string */
-    private static String mapPointToString(JsonNode jsonNode) {
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            return mapper.writeValueAsString(jsonNode);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        return null;
+    /** Maps json point node to mongo point object */
+    private static Point createGeoPoint(JsonNode point) {
+        double x = point.get("x").asDouble();
+        double y = point.get("y").asDouble();
+        return new Point(new Position(x, y));
     }
 
     /** Inserts new collision to database. */
-    private static void insertNewRecord(Connection connection, JsonNode record) throws NumericException {
+    private static void insertNewRecord(MongoCollection<Document> collection, JsonNode record) throws NumericException {
         long date_in = record.get("collision_date_in").asLong(); // convert from milli to micro seconds
         int polygon = record.get("polygon").asInt();
         int device =  record.get("device").asInt();
         boolean in = record.get("in").asBoolean();
         Timestamp date_ts = new Timestamp(date_in);
-        String point_in = mapPointToString(record.get("collision_point_in"));
 
-        try (PreparedStatement preparedStatement = connection.prepareStatement(
-                "INSERT INTO collisions_table (device, polygon, inside, collision_date_in, collision_point_in) VALUES (?, ?, ?, ?, ?)")) {
-            preparedStatement.setInt(1, device);
-            preparedStatement.setInt(2, polygon);
-            preparedStatement.setBoolean(3, in);
-            preparedStatement.setTimestamp(
-                    4,date_ts);
-            preparedStatement.setString(5, point_in);
-            preparedStatement.execute();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        Point geoPoint = createGeoPoint(record.get("collision_point_in"));
+
+        Document document = new Document("device", device)
+                .append("polygon", polygon)
+                .append("inside", in)
+                .append("collision_date_in", date_ts)
+                .append("collision_point_in",geoPoint)
+                .append("collision_date_in",null)
+                .append("collision_point_out",null);
+
+        collection.insertOne(document).subscribe(new ObservableSubscriber<InsertOneResult>());
+
+
     }
 
     /** Updates collision record when the device exits polygon. */
-    private static void updateExistingRecord(Connection connection, JsonNode record){
+    private static void updateExistingRecord(MongoCollection<Document> collection, JsonNode record){
         long date_out = record.get("collision_date_out").asLong();
         int polygon = record.get("polygon").asInt();
         int device =  record.get("device").asInt();
-        String point_out = mapPointToString(record.get("collision_point_out"));
+        Point geoPoint = createGeoPoint(record.get("collision_point_out"));
+        Timestamp date_ts = new Timestamp(date_out);
 
-        String updateSql = "UPDATE collisions_table SET " +
-                "collision_date_out = ?, " +
-                "collision_point_out = ?, " +
-                "inside = ? " +
-                "WHERE polygon = ? AND device = ? AND inside = ?";
+        // Criteria for the update
+        Document filter = new Document("polygon", polygon)
+                .append("device", device)
+                .append("inside", true);
 
-        try (PreparedStatement pstmt = connection.prepareStatement(updateSql)) {
-            pstmt.setTimestamp(1, new Timestamp(date_out));
-            pstmt.setString(2, point_out);
-            pstmt.setBoolean(3, false);
-            pstmt.setInt(4, polygon);
-            pstmt.setInt(5, device);
-            pstmt.setBoolean(6, true);
+        // Specify the update operation
+        Document update = new Document("$set", new Document("inside", false)
+                .append("collision_date_out", date_ts)
+                .append("collision_point_out", geoPoint));
 
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        collection.updateOne(filter, update).subscribe(new ObservableSubscriber<UpdateResult>());;
     }
 
     /** Map function to convert String to Json */
