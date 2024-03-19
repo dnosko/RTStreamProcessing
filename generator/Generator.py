@@ -1,23 +1,19 @@
 import time
-from typing import Dict
-
-import websockets
-from datetime import datetime, date, timezone
 import random
 import json
+import websockets
+from typing import Dict, Tuple
 
+from datetime import datetime, timezone
 
-
-# TODO pridat typy parametrov
-# TODO config subor do ktoreho vlozit websocket uri...
 
 class Generator:
-    #LIMIT_CNT = 1000000
     start_ts = 0
 
     STOP = False
 
-    def __init__(self, devices, limit_x, limit_y, uri, limit_cnt=None) -> None:
+    def __init__(self, devices: int, limit_x: Tuple[float, float], limit_y: Tuple[float, float], uri: str,
+                 limit_cnt: int = None) -> None:
         self.devices = list(range(0, devices, 1))
         self.limit_x = limit_x
         self.limit_y = limit_y
@@ -32,7 +28,7 @@ class Generator:
         print("Connection started.")
 
     @staticmethod
-    def choose_point(start, end) -> float:
+    def choose_point(start: float, end: float) -> float:
         """ Chooses random point in interval from start to end."""
         return random.uniform(start, end)
 
@@ -48,7 +44,7 @@ class Generator:
                 "timestamp": timestamp}
         return data
 
-    def gen_data(self, limit):
+    def gen_data(self, limit: int):
         """Function for generating mock data for testing purposes. """
         while self.cnt < limit:
             self.cnt += 1
@@ -88,15 +84,13 @@ class Generator:
                 print("Connection not established.")
         except websockets.exceptions.ConnectionClosedError:
             print("Connection stopped")
-            #await self.stop()
+            # await self.stop()
             await self.hello()
             print("Connection restarted")
             await self.send_data()
-
 
     async def stop(self):
         """ Stops the generator and closes the websocket"""
         self.STOP = True
         if self.websocket:
             await self.websocket.close(code=1000, reason="Normal closure")
-

@@ -5,11 +5,11 @@ from confluent_kafka import Producer, KafkaException
 
 class KafkaProducer:
 
-    def __init__(self, topic, server):
+    def __init__(self, topic: str, servers: str):
         self.topic = topic
-        self.server = server
+        self.servers = servers
         self.config = {
-            'bootstrap.servers': self.server,
+            'bootstrap.servers': self.servers,
             'retries': 10,
             'acks': 'all',
             'enable.idempotence': True
@@ -19,7 +19,8 @@ class KafkaProducer:
     def produce_msg(self, msg):
         try:
             load_msg = json.loads(msg)
-            self.producer.produce(self.topic, value=msg, key=str(load_msg['id']).encode('utf-8'),  callback=self.delivery_report)
+            self.producer.produce(self.topic, value=msg, key=str(load_msg['id']).encode('utf-8'),
+                                  callback=self.delivery_report)
         except KafkaException as e:
             print(f"Failed to produce message: {e}")
 
@@ -30,9 +31,4 @@ class KafkaProducer:
 
     def flush(self):
         self.producer.flush()
-
-    def stop_producing(self):
-        self.producer.flush()
-        #self.producer.close()
-
 

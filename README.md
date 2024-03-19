@@ -9,7 +9,8 @@ Redis \
 QuestDB \
 Postgres with postgis \
 Nginx \
-FastAPI 
+FastAPI \
+Docker
 
 ## Set up
 ``docker compose build`` \
@@ -17,6 +18,10 @@ FastAPI
 
 ### Then questDB connector creation is needed:
 ``python create_kafka_questdb_connector.py`` 
+
+## Stop
+``docker compose down`` \
+Don't forget to remove volumes and images too. 
 
 ### 2. Generator
 Then start generating data and sending them to websocket server. \

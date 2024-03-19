@@ -1,5 +1,5 @@
 from Generator import Generator
-import sys
+
 import argparse
 import asyncio
 async def main(args):
@@ -18,8 +18,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run mock websocket client data generator.')
 
     parser.add_argument('--num_dev', type=int, default=1000, help='Number of devices. If not specified, its 1000.', required=False)
-    parser.add_argument('--limit_x', type=str, default='0,100.0', help='Longitude interval. If not specified, its 0-100.0', required=False)
-    parser.add_argument('--limit_y', type=str, default='0,100.0', help='Latitude interval. If not specified, its 0-100.0', required=False)
+    parser.add_argument('--limit_x', type=str, default='0.0,100.0', help='Longitude interval. If not specified, its 0-100.0', required=False)
+    parser.add_argument('--limit_y', type=str, default='0.0,100.0', help='Latitude interval. If not specified, its 0-100.0', required=False)
     parser.add_argument('--ws', type=str, default='ws://localhost:8088/ws', help='Websocket connection uri. If not specified, "ws://localhost:8088/ws" is used.', required=False)
     parser.add_argument('--limit', type=int, help='Limit number of generated records.', required=False)
 

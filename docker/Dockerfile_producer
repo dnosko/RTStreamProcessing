@@ -10,4 +10,4 @@ COPY producer/ /app/producer
 
 RUN pip install -r /app/producer/requirements.txt
 
-CMD ["python", "producer/main.py" ]
+CMD ["python", "producer/main.py", "--config", "producer/config.json"]

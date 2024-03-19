@@ -1,12 +1,13 @@
 import asyncio
 import traceback
-
-from ServerWS import ServerWS
+import json
 import sys
+import argparse
+from ServerWS import ServerWS
 
 
-async def main():
-    ws = ServerWS()
+async def main(args):
+    ws = ServerWS(kafka_topic=args['kafka_topic'], bootstrap_servers=args['bootstrap_servers'], host=args['host'], port=args['port'], flush_interval=args['flush_interval'])
 
     try:
         await ws.run()
@@ -19,4 +20,11 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(main())
+    parser = argparse.ArgumentParser(description='Run websocket server')
+    parser.add_argument('--config', type=str,  help='Json config file.')
+    args = parser.parse_args()
+
+    with open(args.config, 'r') as config_file:
+        config = json.load(config_file)
+
+    asyncio.get_event_loop().run_until_complete(main(config))
