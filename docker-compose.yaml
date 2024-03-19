@@ -39,11 +39,12 @@ services:
     networks:
       - internal_network
   kafka1:
+    container_name: "kafka1"
     image: confluentinc/cp-kafka:7.4.1
     ports:
       - "9092:9092"
       - "29092:29092"
-      - "9999:9999"
+      - "9997:9997"
     depends_on:
       - zookeeper
     links:
@@ -118,7 +119,7 @@ services:
       dockerfile: ./docker/Dockerfile_location_recorder
       context: .
     ports:
-      - '8081:8081'
+      - '8085:8085'
     expose:
       - "9009"
     depends_on:

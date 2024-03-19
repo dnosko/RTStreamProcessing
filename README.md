@@ -1,11 +1,22 @@
 # Master Thesis - Brno University Of Technology 2023/2024 - Cloud Computing System for Real-time Data Processing
 
-## Start up
+
+## Technologies used:
+Apache Flink \
+Apache Kafka \
+Apache Sedona \
+Redis \
+QuestDB \
+Postgres with postgis \
+Nginx \
+FastAPI 
+
+## Set up
 ``docker compose build`` \
-``docker compose up`` \
+``docker compose up`` 
 
 ### Then questDB connector creation is needed:
-``python create_kafka_questdb_connector.py`` \
+``python create_kafka_questdb_connector.py`` 
 
 ### 2. Generator
 Then start generating data and sending them to websocket server. \
@@ -17,5 +28,4 @@ List of ids and intervals of X and Y are set in constructor. If not set default 
 QuestDB: http://localhost:9000/ \
 API: http://127.0.0.1:8088/  \
 Kafka UI: http://localhost:8080/
-
 

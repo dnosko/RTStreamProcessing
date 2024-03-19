@@ -47,6 +47,9 @@ public class CollisionTracker {
 
         Properties config = new Properties();
         String fileName = "app.config";
+        if (args.length > 0) {
+            fileName = args[0]; // config file
+        }
         try (FileInputStream fis = new FileInputStream(fileName)) {
             config.load(fis);
         } catch (FileNotFoundException ex) {
@@ -75,13 +78,16 @@ public class CollisionTracker {
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
         StreamTableEnvironment sedona = SedonaContext.create(env, tableEnv);
 
+        String uniqueSuffix = Long.toString(System.currentTimeMillis());
         // TODO prerobit na priamo tabulka z kafka? skusit..
         // https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/overview/
         KafkaSource<String> source = KafkaSource.<String>builder()
         .setBootstrapServers(kafkaServer)
         .setTopics(inputTopic)
         .setGroupId("collision-tracker")
+        .setClientIdPrefix(uniqueSuffix)
         .setProperty("partition.discovery.interval.ms", "10000") // Dynamic Partition Discovery for scaling out topics
+        .setProperty("register.consumer.metrics", "true")
         .setStartingOffsets(OffsetsInitializer.earliest()) // neskor zmenit na OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)
         .setValueOnlyDeserializer(new SimpleStringSchema())
         .build();
