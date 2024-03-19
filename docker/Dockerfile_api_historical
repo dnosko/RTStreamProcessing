@@ -20,4 +20,4 @@ RUN pip install -r requirements.txt
 ENV PYTHONUNBUFFERED=1
 
 
-CMD ["uvicorn", "historical_locations:api", "--host", "0.0.0.0", "--port", "8101", "--reload"]
+CMD ["uvicorn", "historical_locations:api", "--host", "0.0.0.0", "--port", "8101"]

@@ -119,10 +119,6 @@ services:
     build:
       dockerfile: ./docker/Dockerfile_location_recorder
       context: .
-    ports:
-      - '8085:8085'
-    expose:
-      - "9009"
     depends_on:
       - kafka1
       - redis
@@ -158,10 +154,6 @@ services:
     build:
       dockerfile: ./docker/Dockerfile_collisions_recorder
       context: .
-    ports:
-      - '8087:8087'
-    expose:
-      - "9009"
     restart: on-failure
     depends_on:
       questdb:
@@ -177,8 +169,6 @@ services:
     build:
       dockerfile: ./docker/Dockerfile_collisions_tracker
       context: .
-    ports:
-      - '8082:8082'
     restart: on-failure
     depends_on:
       postgres:
@@ -209,7 +199,7 @@ services:
           condition: service_started
     restart: on-failure
     ports:
-      - "8100:8100"
+      - "8100"
     networks:
       - internal_network
   api_historical:
@@ -226,7 +216,7 @@ services:
         condition: service_started
     restart: on-failure
     ports:
-      - "8101:8101"
+      - "8101"
     networks:
       - internal_network
   api_realtime:
@@ -241,7 +231,7 @@ services:
         condition: service_started
     restart: on-failure
     ports:
-      - "8102:8102"
+      - "8102"
     networks:
       - internal_network
   nginx:

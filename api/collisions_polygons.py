@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-
+import sys
 import redis
 import sqlalchemy as db
 from sqlalchemy import select, exc
@@ -30,8 +30,9 @@ async def lifespan(api: FastAPI):
         keys = [str(key_value[0]) for key_value in records]
         values = [str(key_value[1]) for key_value in records]
         redis_cache.mset(dict(zip(keys, values)))
-    except exc.DataError as e:
-            pass
+    except (exc.DataError, exc.OperationalError) as e:
+        print(e)
+        sys.exit(1)
     yield
     # Clean cache
     redis_cache.flushdb()
