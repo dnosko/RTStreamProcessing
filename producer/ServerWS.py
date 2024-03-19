@@ -9,7 +9,7 @@ class ServerWS:
     TOPIC = 'new_locations'
     KAFKASERVER = 'kafka1:19092' #'localhost:9092' #'kafka1:19092'
 
-    FLUSH_INTERVAL = 1000
+    FLUSH_INTERVAL = 10000
 
     def __init__(self):
         self.producer = KafkaProducer(self.TOPIC, self.KAFKASERVER)
