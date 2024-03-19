@@ -12,20 +12,15 @@ import json
 # TODO config subor do ktoreho vlozit websocket uri...
 
 class Generator:
-    # Default values
-    DEVICES = list(range(0, 5000, 1))
-    LIMIT_X = 100.0
-    LIMIT_Y = 100.0
-    URI = "ws://localhost:8088/ws"
     #LIMIT_CNT = 1000000
     start_ts = 0
 
     STOP = False
 
-    def __init__(self, devices=DEVICES, limitX=LIMIT_X, limitY=LIMIT_Y, uri=URI, limit_cnt=None) -> None:
-        self.devices = devices
-        self.limitX = limitX
-        self.limitY = limitY
+    def __init__(self, devices, limit_x, limit_y, uri, limit_cnt=None) -> None:
+        self.devices = list(range(0, devices, 1))
+        self.limit_x = limit_x
+        self.limit_y = limit_y
         self.uri = uri
         self.cnt = 0
         self.websocket = None
@@ -37,7 +32,7 @@ class Generator:
         print("Connection started.")
 
     @staticmethod
-    def choose_point(end, start=0.0) -> float:
+    def choose_point(start, end) -> float:
         """ Chooses random point in interval from start to end."""
         return random.uniform(start, end)
 
@@ -46,7 +41,10 @@ class Generator:
         timestamp = int(datetime.now(timezone.utc).timestamp() * 1e6)
 
         data = {"id": random.choice(self.devices),
-                "point": {"x": self.choose_point(self.limitX), "y": self.choose_point(self.limitY)},
+                "point":
+                    {"x": self.choose_point(self.limit_x[0], self.limit_x[1]),
+                     "y": self.choose_point(self.limit_y[0], self.limit_y[1])
+                     },
                 "timestamp": timestamp}
         return data
 
