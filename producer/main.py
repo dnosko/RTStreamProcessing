@@ -7,7 +7,7 @@ from ServerWS import ServerWS
 
 
 async def main(args):
-    ws = ServerWS(kafka_topic=args['kafka_topic'], bootstrap_servers=args['bootstrap_servers'], host=args['host'], port=args['port'], flush_interval=args['flush_interval'])
+    ws = ServerWS(kafka_topic=args['kafka_topic'], bootstrap_servers=args['bootstrap_servers'], host=args['host'], port=args['port'])
 
     try:
         await ws.run()

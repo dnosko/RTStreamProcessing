@@ -1,7 +1,8 @@
+from time import sleep
+
 import requests
 
-connect_url = "http://localhost:8083/connectors"
-
+connect_url = "http://connect:8083/connectors"
 # connector configuration
 connector_config = {
     "name": "QuestDB",
@@ -20,9 +21,14 @@ connector_config = {
 }
 
 # Send request to create the connector
-response = requests.post(connect_url, json=connector_config)
-
-if response.status_code == 201:
-    print("Connector created successfully!")
-else:
-    print("Failed to create connector:", response.text)
+while True:
+    try:
+        response = requests.post(connect_url, json=connector_config)
+        if response.status_code == 201:
+            print("Connector created successfully!")
+        else:
+            print("Failed to create connector:", response.text)
+        exit(0)
+    except requests.exceptions.ConnectionError:
+        print("Connection error, will retry in 30 seconds...")
+        sleep(30)

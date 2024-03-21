@@ -74,6 +74,15 @@ services:
       - ./docker/kafka_init.sh:/usr/bin/kafka_init.sh
     networks:
       - internal_network
+  connector-init:
+    build:
+      dockerfile: ./docker/Dockerfile_connector
+      context: .
+    depends_on:
+      kafka1:
+        condition: service_started
+    networks:
+      - internal_network
   connect:
     image: kafka-connect-with-questdb
     build:
