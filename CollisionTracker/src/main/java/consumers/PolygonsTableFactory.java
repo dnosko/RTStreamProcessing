@@ -103,7 +103,7 @@ public class PolygonsTableFactory implements TableFactory<Properties, Polygon> {
                         databaseProps.getProperty("url"),
                         databaseProps.getProperty("username"),
                         databaseProps.getProperty("password"));
-                String query = "SELECT id, creation, valid, ST_AsText(fence) as geo_fence FROM " + databaseProps.getProperty("table");
+                String query = "SELECT id, creation, valid, ST_AsText(fence) as geo_fence FROM " + databaseProps.getProperty("table") + " WHERE valid = true";
                 Statement statement = conn_db.createStatement();
                 ResultSet resultSet = statement.executeQuery(query);
                 return resultSetToCollection(resultSet);

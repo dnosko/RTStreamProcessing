@@ -156,11 +156,9 @@ services:
       context: .
     restart: on-failure
     depends_on:
-      questdb:
+      mongodb:
         condition: service_started
       kafka1:
-        condition: service_started
-      postgres:
         condition: service_started
     networks:
       - internal_network
@@ -191,7 +189,7 @@ services:
         context: .
         dockerfile: docker/Dockerfile_api_collisions
     depends_on:
-        questdb:
+        mongodb:
           condition: service_started
         redis:
           condition: service_started
@@ -248,6 +246,18 @@ services:
       - api_realtime
     networks:
       - internal_network
+  mongodb:
+    container_name: "mongodb"
+    image: mongodb/mongodb-community-server:6.0-ubi8
+    ports:
+      - "7017:27017"
+    volumes:
+      - mongodbvolume:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=user
+      - MONGO_INITDB_ROOT_PASSWORD=pass
+    networks:
+      - internal_network
 networks:
   internal_network:
     driver: bridge
@@ -256,3 +266,4 @@ volumes:
   redisvolume:
   postgresvolume:
   nginxcache:
+  mongodbvolume:

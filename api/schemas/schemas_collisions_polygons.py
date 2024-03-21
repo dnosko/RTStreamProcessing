@@ -30,8 +30,8 @@ class CollisionEvent(BaseModel):
     inside: bool
     enter_date: datetime
     exit_date: Optional[datetime]
-    enter_point: Point
-    exit_point: Optional[Point]
+    enter_point: List[float]
+    exit_point: Optional[List[float]]
 
 class Collision(BaseModel):
     id_user: int

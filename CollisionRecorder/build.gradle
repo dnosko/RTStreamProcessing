@@ -21,8 +21,7 @@ repositories {
 dependencies {
     implementation group: 'org.slf4j', name: 'slf4j-nop', version: '2.0.3'
     implementation group: 'org.apache.kafka', name: 'kafka-clients', version: '3.4.0'
-    implementation 'org.questdb:questdb:7.3.10'
-    implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.2'
+    implementation 'org.mongodb:mongodb-driver-reactivestreams:5.0.0'
     // needed if OAuth is used; otherwise this can be left out.
     // See: https://docs.confluent.io/platform/current/kafka/authentication_sasl/authentication_sasl_oauth.html
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.15.2'
