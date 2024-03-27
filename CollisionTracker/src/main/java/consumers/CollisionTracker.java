@@ -21,7 +21,6 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 
 import org.apache.flink.types.Row;
-import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.sedona.flink.SedonaContext;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;

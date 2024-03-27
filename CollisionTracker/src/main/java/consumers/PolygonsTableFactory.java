@@ -5,8 +5,6 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
 import org.apache.sedona.flink.expressions.Constructors;
-import org.locationtech.jts.io.ParseException;
-import scala.sys.Prop;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -103,7 +101,7 @@ public class PolygonsTableFactory implements TableFactory<Properties, Polygon> {
                         databaseProps.getProperty("url"),
                         databaseProps.getProperty("username"),
                         databaseProps.getProperty("password"));
-                String query = "SELECT id, creation, valid, ST_AsText(fence) as geo_fence FROM " + databaseProps.getProperty("table") + " WHERE valid = true";
+                String query = "SELECT id, creation, valid, ST_AsText(fence) as geo_fence FROM " + databaseProps.getProperty("table");
                 Statement statement = conn_db.createStatement();
                 ResultSet resultSet = statement.executeQuery(query);
                 return resultSetToCollection(resultSet);

@@ -157,7 +157,6 @@ public class CollisionRecorder {
 
         collection.insertOne(document).subscribe(subscriberInsert);
 
-
     }
 
     /** Updates collision record when the device exits polygon. */
@@ -178,7 +177,7 @@ public class CollisionRecorder {
                 .append("collision_date_out", date_ts)
                 .append("collision_point_out", geoPoint));
 
-        collection.updateOne(filter, update).subscribe(subscriberUpdate);;
+        collection.updateOne(filter, update).subscribe(subscriberUpdate);
     }
 
     /** Map function to convert String to Json */

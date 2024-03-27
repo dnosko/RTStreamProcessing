@@ -17,11 +17,12 @@ public class ObservableSubscriber<T> implements Subscriber<T> {
     @Override
     public void onNext(T t) {
         System.out.println("Received: " + t);
-        subscription.request(1); // Request the next data item
+        //subscription.request(1); // Request the next data item
     }
 
     @Override
     public void onError(Throwable t) {
+        System.out.println("Failed");
         t.printStackTrace();
     }
 
