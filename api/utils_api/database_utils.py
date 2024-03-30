@@ -21,7 +21,6 @@ def get_polygons(engine, category: int = None, valid: bool = None):
         return result.fetchall()
 
 
-# TODO urobit krajsie a dopisat komentar hihi
 def get_users_devices(user: list, engine, redis_cache):
     """ Looks into cache for defined users and returns list of tuples containing user id and their assigned device id.
     ak je user none tak zavola automaticky vsetky hodnoty z db.. lebo empty list = vsetky hodnoty a nastavi aj cache rovno"""

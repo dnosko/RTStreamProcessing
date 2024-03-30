@@ -13,3 +13,7 @@ class Location(BaseModel):
     device_id: int
     point: Point
     timestamp: int
+
+class User(BaseModel):
+    user_id: int
+    device_id: int

@@ -2,7 +2,7 @@ FROM python:3.9-slim
 
 WORKDIR /usr/src/app
 
-COPY ./docker/create_kafka_questdb_connector.py .
+COPY ./create_kafka_questdb_connector.py .
 RUN pip install requests
 
 CMD ["python", "./create_kafka_questdb_connector.py"]
