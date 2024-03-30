@@ -4,9 +4,11 @@ package consumers;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ObservableSubscriber<T> implements Subscriber<T> {
     private Subscription subscription;
-    private boolean completed = false;
 
     @Override
     public void onSubscribe(Subscription s) {
@@ -17,7 +19,7 @@ public class ObservableSubscriber<T> implements Subscriber<T> {
     @Override
     public void onNext(T t) {
         System.out.println("Received: " + t);
-        //subscription.request(1); // Request the next data item
+        subscription.request(1); // Request the next data item
     }
 
     @Override
@@ -29,10 +31,6 @@ public class ObservableSubscriber<T> implements Subscriber<T> {
     @Override
     public void onComplete() {
         System.out.println("Completed");
-        completed = true;
     }
 
-    public boolean isCompleted() {
-        return completed;
-    }
 }

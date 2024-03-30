@@ -7,8 +7,10 @@ import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.ServerApi;
 import com.mongodb.ServerApiVersion;
+import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.geojson.Point;
 import com.mongodb.client.model.geojson.Position;
+import com.mongodb.client.result.InsertManyResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.reactivestreams.client.MongoDatabase;
@@ -28,7 +30,9 @@ import java.io.FileNotFoundException;
 
 import java.sql.*;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -58,6 +62,7 @@ public class CollisionRecorder {
         consumer_props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServer);
         consumer_props.put(ConsumerConfig.GROUP_ID_CONFIG, kafkaGroup);
         consumer_props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+         consumer_props.put("enable.auto.commit", "false");
         consumer_props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumer_props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumer_props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
@@ -73,14 +78,19 @@ public class CollisionRecorder {
                 .build();
         MongoClientSettings settings = MongoClientSettings.builder()
                 .applyConnectionString(connString)
+                .applyToConnectionPoolSettings(builder -> builder.maxSize(100))
                 .serverApi(serverApi)
                 .build();
         MongoClient mongoClient = MongoClients.create(settings);
         MongoDatabase database = mongoClient.getDatabase("db");
         MongoCollection<Document> collection = database.getCollection("collisions");
+        //create indexes
+        collection.createIndex(Indexes.ascending("device"));
+        collection.createIndex(Indexes.compoundIndex(Indexes.ascending("device"), Indexes.ascending("polygon")));
+
 
         ObservableSubscriber<UpdateResult> subscriberUpdate = new ObservableSubscriber<UpdateResult>();
-        ObservableSubscriber<InsertOneResult> subscriberInsert = new ObservableSubscriber<InsertOneResult>();
+        ObservableSubscriber<InsertManyResult> subscriberInsert = new ObservableSubscriber<InsertManyResult>();
 
         try {
             consumer.subscribe(Arrays.asList(topic));
@@ -89,6 +99,7 @@ public class CollisionRecorder {
             while (true) {
                 try {
                     ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+                    List<Document> inserts = new ArrayList<>();
                     for (ConsumerRecord<String, String> record : records) {
 
                         String value = record.value();
@@ -97,13 +108,18 @@ public class CollisionRecorder {
 
 
                         if (typeOfRecord.equals("enter")){ // enter polygon, create new record
-                            insertNewRecord(collection, jsonRecord, subscriberInsert);
+                            Document doc = insertNewRecord(collection, jsonRecord);
+                            inserts.add(doc);
                         }
                         else {
                             // exit polygon, update record
                             updateExistingRecord(collection, jsonRecord, subscriberUpdate);
                         }
+                        if (inserts.size() == 10)
+                            collection.insertMany(inserts).subscribe(subscriberInsert);
                     }
+                    // Commit the offsets of processed messages in this batch
+                    consumer.commitSync();
                 } catch (KafkaException e) {
                     System.out.println(e.getCause());
                     long offset = getOffset(e.getCause().toString());
@@ -138,7 +154,7 @@ public class CollisionRecorder {
     }
 
     /** Inserts new collision to database. */
-    private static void insertNewRecord(MongoCollection<Document> collection, JsonNode record, ObservableSubscriber<InsertOneResult> subscriberInsert) {
+    private static Document insertNewRecord(MongoCollection<Document> collection, JsonNode record) {
         long date_in = record.get("collision_date_in").asLong(); // convert from milli to micro seconds
         int polygon = record.get("polygon").asInt();
         int device =  record.get("device").asInt();
@@ -155,7 +171,7 @@ public class CollisionRecorder {
                 .append("collision_point_out",null)
                 .append("collision_date_out",null);
 
-        collection.insertOne(document).subscribe(subscriberInsert);
+        return document;
 
     }
 
