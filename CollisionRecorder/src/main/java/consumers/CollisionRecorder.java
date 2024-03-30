@@ -90,7 +90,7 @@ public class CollisionRecorder {
 
 
         ObservableSubscriber<UpdateResult> subscriberUpdate = new ObservableSubscriber<UpdateResult>();
-        ObservableSubscriber<InsertManyResult> subscriberInsert = new ObservableSubscriber<InsertManyResult>();
+        ObservableSubscriber<InsertOneResult> subscriberInsert = new ObservableSubscriber<InsertOneResult>();
 
         try {
             consumer.subscribe(Arrays.asList(topic));
@@ -99,7 +99,7 @@ public class CollisionRecorder {
             while (true) {
                 try {
                     ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-                    List<Document> inserts = new ArrayList<>();
+
                     for (ConsumerRecord<String, String> record : records) {
 
                         String value = record.value();
@@ -108,15 +108,13 @@ public class CollisionRecorder {
 
 
                         if (typeOfRecord.equals("enter")){ // enter polygon, create new record
-                            Document doc = insertNewRecord(collection, jsonRecord);
-                            inserts.add(doc);
+                            insertNewRecord(collection, jsonRecord, subscriberInsert);
                         }
                         else {
                             // exit polygon, update record
                             updateExistingRecord(collection, jsonRecord, subscriberUpdate);
                         }
-                        if (inserts.size() == 10)
-                            collection.insertMany(inserts).subscribe(subscriberInsert);
+
                     }
                     // Commit the offsets of processed messages in this batch
                     consumer.commitSync();
@@ -154,7 +152,7 @@ public class CollisionRecorder {
     }
 
     /** Inserts new collision to database. */
-    private static Document insertNewRecord(MongoCollection<Document> collection, JsonNode record) {
+    private static void insertNewRecord(MongoCollection<Document> collection, JsonNode record, ObservableSubscriber<InsertOneResult> subscriberInsert) {
         long date_in = record.get("collision_date_in").asLong(); // convert from milli to micro seconds
         int polygon = record.get("polygon").asInt();
         int device =  record.get("device").asInt();
@@ -171,7 +169,7 @@ public class CollisionRecorder {
                 .append("collision_point_out",null)
                 .append("collision_date_out",null);
 
-        return document;
+        collection.insertOne(document).subscribe(subscriberInsert);
 
     }
 

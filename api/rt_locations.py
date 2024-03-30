@@ -77,5 +77,4 @@ def points_on_map():
 
     mapping = map_user_to_device(records)  # map the user id to device id
 
-    print(mapping)
     return [_schemas.User(user_id=mapping[device_id], device_id=device_id)  for device_id in mapping]

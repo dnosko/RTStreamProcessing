@@ -77,7 +77,6 @@ def polygons_on_map(valid: Optional[bool] = Query(None), category: Optional[int]
 
 
 # Aké jednotky sa nachádzali v oblasti definovanej polygonom v určitom časovom okne
-# (for format see https://questdb.io/docs/reference/sql/where/#timestamp-and-date)
 @api.get("/collisions/history/", response_model=_schemas.CollisionsWithTimeQuery)
 def history_collisions(time: str = Query(..., title="Time",
                                          description="The time parameter specifying the time range for querying collisions. Please split the from and to time with ;"),
