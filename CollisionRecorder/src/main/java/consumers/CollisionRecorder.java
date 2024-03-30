@@ -99,7 +99,6 @@ public class CollisionRecorder {
             while (true) {
                 try {
                     ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-
                     for (ConsumerRecord<String, String> record : records) {
 
                         String value = record.value();
@@ -117,7 +116,8 @@ public class CollisionRecorder {
 
                     }
                     // Commit the offsets of processed messages in this batch
-                    consumer.commitSync();
+                    if (!records.isEmpty())
+                        consumer.commitSync();
                 } catch (KafkaException e) {
                     System.out.println(e.getCause());
                     long offset = getOffset(e.getCause().toString());
