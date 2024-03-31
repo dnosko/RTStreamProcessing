@@ -33,7 +33,7 @@ import static org.apache.flink.table.api.Expressions.*;
 @Slf4j
 public class CollisionTracker {
     static String JOB_NAME = "Collision Tracker";
-    public static final int CHECKPOINTING_INTERVAL_MS = 5000;
+    public static final int CHECKPOINTING_INTERVAL_MS = 1000;
     static final String polygonsTable = "polygons";
     static final String inputTopic = "new_locations";
     static final String outputTopic = "collisions";
@@ -69,7 +69,7 @@ public class CollisionTracker {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.enableCheckpointing(CHECKPOINTING_INTERVAL_MS);
 
-        env.getCheckpointConfig().setCheckpointTimeout(CHECKPOINTING_INTERVAL_MS*4);
+        //env.getCheckpointConfig().setCheckpointTimeout(CHECKPOINTING_INTERVAL_MS*4);
         // in the future for more devices maybe consider rocksDB https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/ops/state/state_backends/
         env.setStateBackend(new HashMapStateBackend());
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
@@ -86,7 +86,7 @@ public class CollisionTracker {
         .setClientIdPrefix(uniqueSuffix)
         .setProperty("partition.discovery.interval.ms", "10000") // Dynamic Partition Discovery for scaling out topics
         .setProperty("register.consumer.metrics", "true")
-        .setStartingOffsets(OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)) //OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST)
+        .setStartingOffsets(OffsetsInitializer.committedOffsets(OffsetResetStrategy.EARLIEST))
         .setValueOnlyDeserializer(new SimpleStringSchema())
         .build();
 
