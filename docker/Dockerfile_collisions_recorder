@@ -8,4 +8,4 @@ COPY CollisionRecorder/ .
 RUN ./gradlew shadowJar
 
 # Define the command to run the Java application
-CMD ["java", "-jar", "build/libs/collision-recorder-1.0-SNAPSHOT.jar", "consumers.CollisionRecorder"]
+CMD ["java", "-jar", "build/libs/collision-recorder-1.0.jar", "consumers.CollisionRecorder"]

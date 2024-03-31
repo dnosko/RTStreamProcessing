@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,7 +63,7 @@ public class CollisionRecorder {
         consumer_props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServer);
         consumer_props.put(ConsumerConfig.GROUP_ID_CONFIG, kafkaGroup);
         consumer_props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-         consumer_props.put("enable.auto.commit", "false");
+        consumer_props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
         consumer_props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumer_props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumer_props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
@@ -79,6 +80,8 @@ public class CollisionRecorder {
         MongoClientSettings settings = MongoClientSettings.builder()
                 .applyConnectionString(connString)
                 .applyToConnectionPoolSettings(builder -> builder.maxSize(100))
+                .applyToConnectionPoolSettings(builder ->
+                        builder.maxWaitTime(5, TimeUnit.MINUTES))
                 .serverApi(serverApi)
                 .build();
         MongoClient mongoClient = MongoClients.create(settings);

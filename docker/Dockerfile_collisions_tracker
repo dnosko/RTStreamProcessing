@@ -4,8 +4,10 @@ WORKDIR /usr/src/app
 
 COPY CollisionTracker/ .
 
-# Compile the Java application
+# Compile the java app
 RUN ./gradlew shadowJar
 
-# Define the command to run the Java application
-CMD ["java", "-jar", "build/libs/CollisionTracker-1.0-SNAPSHOT-all.jar"]
+ENV JAVA_OPTS=""
+
+#CMD ["java", "${JAVA_OPTS}", "-jar", "build/libs/CollisionTracker-1.0-SNAPSHOT-all.jar"]
+CMD java $JAVA_OPTS -jar build/libs/CollisionTracker-1.0-SNAPSHOT-all.jar

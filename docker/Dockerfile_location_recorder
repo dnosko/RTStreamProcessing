@@ -4,8 +4,8 @@ WORKDIR /usr/src/app
 
 COPY LocationRecorder/ .
 
-# Compile the Java application
+# Compile the Java app
 RUN ./gradlew shadowJar
 
-# Define the command to run the Java application
-CMD ["java", "-jar", "build/libs/location-recorder-0.1.jar", "consumers.LocationRecorder"]
+
+CMD ["java", "-jar", "build/libs/location-recorder-1.0.jar", "consumers.LocationRecorder"]
