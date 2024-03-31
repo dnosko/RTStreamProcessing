@@ -22,11 +22,10 @@ services:
     image: questdb/questdb:7.0.1
     container_name: "questdb"
     restart: always
-    expose:
-      - "9009"
     ports:
       - "9000:9000"
       - "8812:8812"
+      - "9009:9009"
     volumes:
       - questdbvolume:/root/.questdb
     environment:
@@ -71,7 +70,9 @@ services:
         condition: service_started
     command: "bash -c '/usr/bin/kafka_init.sh'"
     volumes:
-      - ./docker/kafka_init.sh:/usr/bin/kafka_init.sh
+      - type: bind
+        source: ./docker/kafka_init.sh
+        target: /usr/bin/kafka_init.sh
     networks:
       - internal_network
   connector-init:
@@ -148,9 +149,13 @@ services:
     image: postgis/postgis:16-3.4
     container_name: "postgis"
     volumes:
+      - type: bind
+        source: ./database.sql
+        target: /var/database.sql
+      - type: bind
+        source: ./docker/init-postgres.sh
+        target: /docker-entrypoint-initdb.d/init-postgres.sh
       - postgresvolume:/var/lib/postgresql
-      - ./database.sql:/var/database.sql
-      - ./docker/init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
     environment:
       - POSTGRES_DB=data
       - POSTGRES_USER=postgres
@@ -253,7 +258,9 @@ services:
     container_name: "nginx"
     image: nginx:alpine
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - type: bind
+        source: ./nginx.conf
+        target: /etc/nginx/nginx.conf:ro
       - nginxcache:/var/cache/nginx
     ports:
       - "8088:80"
