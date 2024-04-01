@@ -15,8 +15,8 @@ echo "Kafka is ready. Configuring topics..."
 CLEANUP_POLICY="compact,delete"
 # Alter topic
 kafka-configs --bootstrap-server kafka1:19092 --entity-type topics --entity-name collisions --alter --add-config cleanup.policy=[compact,delete]
-kafka-topics --bootstrap-server kafka1:19092 --alter --topic collisions --partitions 2
-kafka-topics --bootstrap-server kafka1:19092 --alter --topic new_locations --partitions 2
+kafka-topics --bootstrap-server kafka1:19092 --alter --topic collisions --partitions 10
+kafka-topics --bootstrap-server kafka1:19092 --alter --topic new_locations --partitions 10
 
 
 tail -f /dev/null
