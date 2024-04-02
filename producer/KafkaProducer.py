@@ -36,5 +36,12 @@ class KafkaProducer:
 
     def fetch_and_print_metrics(self, stats_json_str):
         stats = json.loads(stats_json_str)
+        keys_of_interest = ['msg_cnt', 'tx', 'rx', 'txretries', 'brokers','partitions']
+        stats_chosen = {}
 
-        print(json.dumps(stats, indent=4))
+        for key in keys_of_interest:
+            if key in stats:
+                stats_chosen[key] = stats[key]
+
+
+        print(json.dumps(stats_chosen, indent=4))
