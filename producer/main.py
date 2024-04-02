@@ -21,7 +21,7 @@ async def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run websocket server')
-    parser.add_argument('--config', type=str,  help='Json config file.')
+    parser.add_argument('--config', type=str,  help='Json config file.', default="config.json")
     args = parser.parse_args()
 
     with open(args.config, 'r') as config_file:

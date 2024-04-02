@@ -12,7 +12,9 @@ class KafkaProducer:
             'bootstrap.servers': self.servers,
             'retries': 10,
             'acks': 'all',
-            'enable.idempotence': True
+            'enable.idempotence': True,
+            'statistics.interval.ms': 250,
+            'stats_cb': self.fetch_and_print_metrics
         }
         self.producer = Producer(self.config)
 
@@ -32,3 +34,7 @@ class KafkaProducer:
     def flush(self):
         self.producer.flush()
 
+    def fetch_and_print_metrics(self, stats_json_str):
+        stats = json.loads(stats_json_str)
+
+        print(json.dumps(stats, indent=4))
