@@ -12,13 +12,15 @@ from utils_api.tables import users
 from utils_api.utils import map_user_to_device
 from utils_api.database_utils import get_users_devices, get_users_from_db
 
+from config import REDIS_HOST, REDIS_DB_LOCATIONS, REDIS_DB_CACHE, REDIS_PORT, POSTGRES_CONN_STRING
+
 INTERNAL_SERVER_ERROR = 500
 NOT_FOUND_ERROR = 404
 BAD_REQUEST_ERROR = 400
 
-redis_client = redis.StrictRedis(host='redis', port=6379, db=0, decode_responses=True)
-redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
-engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
+redis_client = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB_LOCATIONS, decode_responses=True)
+redis_cache = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB_CACHE, decode_responses=True)
+engine = db.create_engine(POSTGRES_CONN_STRING)
 
 
 @asynccontextmanager

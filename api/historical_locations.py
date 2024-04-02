@@ -12,11 +12,11 @@ from schemas import schemas_historical as _schemas
 
 from sqlalchemy import  exc
 
+from config import QUESTDB_CONN_STRING, REDIS_HOST, REDIS_PORT, REDIS_DB_CACHE, POSTGRES_CONN_STRING
 
-conn_str = 'user=admin password=quest host=questdb port=8812 dbname=qdb'
 
-engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
-redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
+engine = db.create_engine(POSTGRES_CONN_STRING)
+redis_cache = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB_CACHE, decode_responses=True)
 
 
 @asynccontextmanager
@@ -55,7 +55,7 @@ def trajectory(user: int = Path(..., title="User ID"),
     else:
         query = f'SELECT id, point_x,point_y,timestamp FROM locations_table where id = {device};'
 
-    with pg.connect(conn_str) as connection:
+    with pg.connect(QUESTDB_CONN_STRING) as connection:
 
         with connection.cursor() as cur:
             cur.execute(query)
@@ -87,7 +87,7 @@ def trajectory(time: str = Query(..., title="Time window", description="The time
 
     # add order by to query, skip semicolon from previously defined query
     query = query[:-1] + " order by id;"
-    with pg.connect(conn_str) as connection:
+    with pg.connect(QUESTDB_CONN_STRING) as connection:
 
         with connection.cursor() as cur:
             cur.execute(query)

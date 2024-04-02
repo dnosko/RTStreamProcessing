@@ -16,17 +16,13 @@ from utils_api.utils import map_user_to_device
 from utils_api.database_utils import get_users_from_db
 from utils_api.database_utils import get_users_devices, get_polygons
 
+from config import MONGODB_DATABASE, MONGODB_COLLECTION, MONGODB_CONN_STRING, REDIS_HOST, REDIS_PORT, REDIS_DB_CACHE, POSTGRES_CONN_STRING
 
-#conn_str_mongodb = "mongodb://user:pass@localhost:7017"
-conn_str_mongodb = "mongodb://user:pass@mongodb:27017"
-#client_mongodb = MongoClient(conn_str_mongodb)
-#mongo_db = client_mongodb["db"]
-#collisions_collection = mongo_db["collisions"]
 
-redis_cache = redis.StrictRedis(host='redis', port=6379, db=1, decode_responses=True)
-#redis_cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
-engine = db.create_engine("postgresql://postgres:password@postgres:5432/data")
-#engine = db.create_engine("postgresql://postgres:password@0.0.0.0:25432/data")
+redis_cache = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB_CACHE, decode_responses=True)
+
+engine = db.create_engine(POSTGRES_CONN_STRING)
+
 
 INTERNAL_SERVER_ERROR = 500
 
@@ -34,10 +30,10 @@ INTERNAL_SERVER_ERROR = 500
 @asynccontextmanager
 async def lifespan(api: FastAPI):
 
-    client_mongodb = MongoClient(conn_str_mongodb)
-    mongo_db = client_mongodb["db"]
+    client_mongodb = MongoClient(MONGODB_CONN_STRING)
+    mongo_db = client_mongodb[MONGODB_DATABASE]
     global collisions_collection
-    collisions_collection = mongo_db["collisions"]
+    collisions_collection = mongo_db[MONGODB_COLLECTION]
     # Load the cache
     try:
         records = get_users_from_db(engine)
