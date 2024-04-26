@@ -7,6 +7,7 @@ Apache Kafka \
 Apache Sedona \
 Redis \
 QuestDB \
+MongoDB with ReactiveStreams \
 Postgres with postgis \
 Nginx \
 FastAPI \
@@ -14,14 +15,11 @@ Docker
 
 ## Set up
 ``docker compose build`` \
-``docker compose up`` 
-
-### Then questDB connector creation is needed:
-``python create_kafka_questdb_connector.py`` 
+``docker compose up``
 
 ## Stop
 ``docker compose down`` \
-Don't forget to remove volumes and images too. 
+Don't forget to remove volumes and images too.
 
 ### 2. Generator
 Then start generating data and sending them to websocket server. \
