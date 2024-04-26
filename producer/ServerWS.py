@@ -20,9 +20,10 @@ class ServerWS:
                 message = await websocket.recv()
                 reply = f"Data received"
                 await websocket.send(reply)
-                # message = self.generator.gen_data()
+
                 self.msg_counter += 1
                 self.producer.produce_msg(message)
+                # flush interval for sending messages in resonable batches
                 if self.msg_counter % self.flush_interval == 0:
                     self.producer.flush()
         except websockets.exceptions.ConnectionClosedOK:

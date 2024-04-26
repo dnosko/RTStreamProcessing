@@ -111,8 +111,8 @@ services:
       CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
       CONNECT_REST_ADVERTISED_HOST_NAME: "connect"
-      #KAFKA_JMX_HOSTNAME: 127.0.0.1
-      #KAFKA_JMX_PORT: 9997
+      KAFKA_JMX_HOSTNAME: 127.0.0.1
+      KAFKA_JMX_PORT: 9997
       KAFKA_JMX_OPTS: "-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.rmi.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
     networks:
       - internal_network
@@ -129,7 +129,6 @@ services:
     networks:
       - internal_network
   locationrecorder:
-    container_name: "location_recorder"
     build:
       dockerfile: ./docker/Dockerfile_location_recorder
       context: .
@@ -140,6 +139,8 @@ services:
       - kafka1:kafka1
       - redis:redis
     restart: on-failure
+    deploy:
+      replicas: 1
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -168,11 +169,12 @@ services:
     networks:
       - internal_network
   collisionrecorder:
-    container_name: "collision_recorder"
     build:
       dockerfile: ./docker/Dockerfile_collisions_recorder
       context: .
     restart: on-failure
+    deploy:
+      replicas: 1
     depends_on:
       mongodb:
         condition: service_started
@@ -181,11 +183,12 @@ services:
     networks:
       - internal_network
   collisiontracker:
-    container_name: "collision_tracker"
     build:
       dockerfile: ./docker/Dockerfile_collisions_tracker
       context: .
     restart: on-failure
+    deploy:
+      replicas: 1
     ports:
       - "9998:9998"
     depends_on:
@@ -203,10 +206,11 @@ services:
       context: .
     depends_on:
       - kafka1
+    deploy:
+      replicas: 1
     networks:
       - internal_network
   api_collisions:
-    container_name: api_collisions
     build:
         context: .
         dockerfile: docker/Dockerfile_api_collisions
@@ -218,12 +222,13 @@ services:
         postgres:
           condition: service_started
     restart: on-failure
+    deploy:
+      replicas: 1
     ports:
       - "8100"
     networks:
       - internal_network
   api_historical:
-    container_name: api_historical
     build:
       context: .
       dockerfile: docker/Dockerfile_api_historical
@@ -235,12 +240,13 @@ services:
       postgres:
         condition: service_started
     restart: on-failure
+    deploy:
+      replicas: 1
     ports:
       - "8101"
     networks:
       - internal_network
   api_realtime:
-    container_name: api_realtime
     build:
       context: .
       dockerfile: docker/Dockerfile_api_rt_locations
@@ -250,6 +256,8 @@ services:
       postgres:
         condition: service_started
     restart: on-failure
+    deploy:
+      replicas: 1
     ports:
       - "8102"
     networks:

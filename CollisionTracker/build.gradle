@@ -27,12 +27,11 @@ dependencies {
     implementation group: 'org.apache.flink', name: 'flink-connector-kafka', version: '3.1.0-1.18'
     implementation 'org.apache.flink:flink-connector-files:1.18.0'
     implementation group: 'org.apache.flink', name: 'flink-table-planner_2.12', version: '1.18.0'
-    //implementation group: 'org.apache.flink', name: 'flink-table-planner-blink_2.12', version: '1.13.6'
     implementation group: 'org.apache.flink', name: 'flink-csv', version: '1.18.0'
     implementation group: 'org.apache.flink', name: 'flink-json', version: '1.18.0'
-    
     implementation group: 'org.apache.flink', name: 'flink-table-api-java-bridge', version: '1.18.0'
 
+    implementation group: 'org.apache.kafka', name: 'kafka-clients', version: '3.4.0'
     implementation group: 'org.apache.sedona', name: 'sedona-flink_2.12', version: '1.5.0'
     implementation group: 'org.datasyslab', name: 'geotools-wrapper', version: '1.5.1-28.2'
     implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.2'
@@ -46,7 +45,6 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
-    //runtimeOnly group: 'org.postgresql', name: 'postgresql', version: '42.7.2'
     runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:2.21.1"
     runtimeOnly "org.apache.logging.log4j:log4j-api:2.21.1"
     runtimeOnly "org.apache.logging.log4j:log4j-core:2.21.1"
@@ -104,7 +102,7 @@ shadowJar {
 tasks.register('fatJar', Jar) {
     manifest.from jar.manifest
     archiveClassifier = 'fat'
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE // dont allow duplicates
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE // allow duplicates
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     } {

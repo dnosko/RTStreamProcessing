@@ -18,7 +18,7 @@ public class ObservableSubscriber<T> implements Subscriber<T> {
 
     @Override
     public void onNext(T t) {
-        System.out.println("Received: " + t);
+        //System.out.println("Received: " + t);
         subscription.request(1); // Request the next data item
     }
 
@@ -30,7 +30,7 @@ public class ObservableSubscriber<T> implements Subscriber<T> {
 
     @Override
     public void onComplete() {
-        System.out.println("Completed");
+        //System.out.println("Completed");
     }
 
 }

@@ -13,7 +13,7 @@ class KafkaProducer:
             'retries': 10,
             'acks': 'all',
             'enable.idempotence': True,
-            'statistics.interval.ms': 250,
+            'statistics.interval.ms': 1000,
             'stats_cb': self.fetch_and_print_metrics
         }
         self.producer = Producer(self.config)
@@ -36,7 +36,7 @@ class KafkaProducer:
 
     def fetch_and_print_metrics(self, stats_json_str):
         stats = json.loads(stats_json_str)
-        keys_of_interest = ['msg_cnt', 'tx', 'rx', 'txretries', 'brokers','partitions']
+        keys_of_interest = ['topics', 'eos', 'msg_cnt', 'tx', 'rx', 'ts', 'txmsgs', 'rxmsgs']
         stats_chosen = {}
 
         for key in keys_of_interest:

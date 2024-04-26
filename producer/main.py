@@ -11,7 +11,6 @@ async def main(args):
 
     try:
         await ws.run()
-        #ws.gen_message()
     except Exception:
         traceback.print_exc()
     finally:

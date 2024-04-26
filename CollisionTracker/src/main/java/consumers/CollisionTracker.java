@@ -2,6 +2,7 @@ package consumers;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
@@ -15,6 +16,8 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.MemorySize;
 
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
@@ -33,7 +36,7 @@ import static org.apache.flink.table.api.Expressions.*;
 @Slf4j
 public class CollisionTracker {
     static String JOB_NAME = "Collision Tracker";
-    public static final int CHECKPOINTING_INTERVAL_MS = 1000;
+    public static final int CHECKPOINTING_INTERVAL_MS = 5000;
     static final String polygonsTable = "polygons";
     static final String inputTopic = "new_locations";
     static final String outputTopic = "collisions";
@@ -57,28 +60,29 @@ public class CollisionTracker {
         }
 
         String kafkaServer = config.getProperty("kafka_server");
-        String groupID = config.getProperty("group_id");
         String db_conn_string = config.getProperty("postgres_connection_string");
         String db_username = config.getProperty("postgres_username");
         String db_password = config.getProperty("postgres_password");
+        String managedMemorySize = config.getProperty("managed_memory_size");
         Properties databaseProps = setDatabaseProperties(db_conn_string, db_username, db_password, polygonsTable);
 
-
-
+        // setup managed memory size
+        Configuration configMemory = new Configuration();
+        configMemory.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.parse(managedMemorySize));
         // set up flink's stream environment
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(configMemory);
         env.enableCheckpointing(CHECKPOINTING_INTERVAL_MS);
-
-        //env.getCheckpointConfig().setCheckpointTimeout(CHECKPOINTING_INTERVAL_MS*4);
-        // in the future for more devices maybe consider rocksDB https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/ops/state/state_backends/
+        env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
+        env.getCheckpointConfig().setTolerableCheckpointFailureNumber(3);
         env.setStateBackend(new HashMapStateBackend());
+        env.getCheckpointConfig().setCheckpointStorage("file:///checkpoint-dir"); // save checkpoints to file
+
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().build();
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
         StreamTableEnvironment sedona = SedonaContext.create(env, tableEnv);
 
         String uniqueSuffix = Long.toString(System.currentTimeMillis());
-        //TODO prerobit na priamo tabulka z kafka? skusit..
-        // https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/connectors/table/overview/
+
         KafkaSource<String> source = KafkaSource.<String>builder()
         .setBootstrapServers(kafkaServer)
         .setTopics(inputTopic)
@@ -128,14 +132,6 @@ public class CollisionTracker {
             // group stream by device_id and produce collision events in json format
             DataStream<String> collisionsEvents = resultStream.keyBy(r -> (Integer) r.getField(1))
                                 .flatMap(new PolygonMatchingFlatMap()).map(e -> e.toString());
-
-            /*
-            * Please ensure that you use unique transactionalIdPrefix across your applications running
-            *  on the same Kafka cluster such that multiple running jobs do not interfere in their transactions!
-            * Additionally, it is highly recommended to tweak Kafka transaction timeout
-            * (see Kafka producer transaction.timeout.ms)» maximum checkpoint duration + maximum restart duration
-            * or data loss may happen when Kafka expires an uncommitted transaction.
-            * */
 
             KafkaSink<String> sink = KafkaSink.<String>builder()
                     .setBootstrapServers(kafkaServer)

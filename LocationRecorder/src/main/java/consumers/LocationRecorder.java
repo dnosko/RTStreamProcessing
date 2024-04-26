@@ -7,22 +7,14 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Properties;
 
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPooled;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,20 +49,13 @@ public class LocationRecorder {
 
         /**********************************************************/
 
-        JedisPooled jedis = new JedisPooled(redisHost, redisPort ); // redis
-        AtomicInteger cnt = new AtomicInteger(0);
+        JedisPooled jedis = new JedisPooled(redisHost, redisPort );
+
 
         final Consumer<String, String> consumer = new KafkaConsumer<>(consumer_props);
 
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
         try {
             consumer.subscribe(Arrays.asList(topic));
-
-            scheduler.scheduleAtFixedRate(() -> {
-                System.out.println(cnt.get());
-                cnt.set(0);
-            }, 0, 1, TimeUnit.MINUTES);
 
             while (true) {
                 try {
@@ -80,7 +65,6 @@ public class LocationRecorder {
                             String key = record.key();
                             String value = record.value();
                             writeToRTDB(jedis, key, value);
-                            cnt.incrementAndGet();
                     }
                 } catch (KafkaException e) {
                     System.out.println(e.getCause());
