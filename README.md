@@ -40,3 +40,7 @@ List of ids and intervals of X and Y are set through optional arguments. If not 
 QuestDB: http://localhost:9000/ \
 API: http://127.0.0.1:8088/  \
 Kafka UI: http://localhost:8080/
+
+## Architecture of the system:
+![MicroServices-Copy of collisions s MQ drawio](https://github.com/dnosko/RTStreamProcessing/assets/55986283/945f65b1-eae0-478d-905e-f222ffda41f5)
+
