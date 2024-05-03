@@ -117,7 +117,7 @@ services:
     networks:
       - internal_network
   redis:
-    image: redis/redis-stack:latest
+    image: redis/redis-stack:7.2.0-v9
     container_name: "redis"
     restart: always
     ports:
