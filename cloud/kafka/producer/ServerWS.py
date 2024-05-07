@@ -2,20 +2,28 @@
 # VUT FIT 2024
 
 import asyncio
+
 import websockets
+
 from KafkaProducer import KafkaProducer
 
 
 class ServerWS:
     FLUSH_INTERVAL = 10000
 
-    def __init__(self, kafka_topic: str, bootstrap_servers: str, host: str, port: int, other_configs:dict=None) -> None:
+    def __init__(
+        self,
+        kafka_topic: str,
+        bootstrap_servers: str,
+        host: str,
+        port: int,
+        other_configs: dict = None,
+    ) -> None:
         self.producer = KafkaProducer(kafka_topic, bootstrap_servers, other_configs)
         self.host = host
         self.port = port
         self.flush_interval = self.FLUSH_INTERVAL
         self.msg_counter = 0
-        
 
     async def accept_msg(self, websocket) -> None:
         """Callback function for accepting messages from clients."""

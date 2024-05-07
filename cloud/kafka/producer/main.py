@@ -1,16 +1,24 @@
 # Daša Nosková - xnosko05
 # VUT FIT 2024
 
+import argparse
 import asyncio
-import traceback
+import gzip
 import json
 import sys
-import argparse
+import traceback
+
 from ServerWS import ServerWS
-import gzip
+
 
 async def main(args):
-    ws = ServerWS(kafka_topic=args['kafka_topic'], bootstrap_servers=args['bootstrap_servers'], host=args['host'], port=args['port'], other_configs=args['ssl_config'])
+    ws = ServerWS(
+        kafka_topic=args["kafka_topic"],
+        bootstrap_servers=args["bootstrap_servers"],
+        host=args["host"],
+        port=args["port"],
+        other_configs=args["ssl_config"],
+    )
 
     try:
         await ws.run()
@@ -22,11 +30,11 @@ async def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run websocket server')
-    parser.add_argument('--config', type=str,  help='Json config file.', default="config.json")
+    parser = argparse.ArgumentParser(description="Run websocket server")
+    parser.add_argument("--config", type=str, help="Json config file.", default="config.json")
     args = parser.parse_args()
 
-    with open(args.config, 'r') as config_file:
+    with open(args.config, "r") as config_file:
         config = json.load(config_file)
 
     asyncio.get_event_loop().run_until_complete(main(config))
