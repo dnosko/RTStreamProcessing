@@ -1,0 +1,12 @@
+{
+  "host": "0.0.0.0",
+  "port": 8001,
+  "kafka_topic": "new_locations",
+  "bootstrap_servers": "pkc-z1o60.europe-west1.gcp.confluent.cloud:9092",
+  "ssl_config": {
+    "security.protocol": "SASL_SSL",
+    "sasl.mechanisms": "PLAIN",
+    "sasl.username": "API KEY",
+    "sasl.password": "API SECRET"
+  }
+}
