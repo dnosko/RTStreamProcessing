@@ -1,3 +1,7 @@
+/** Daša Nosková - xnosko05
+ *  VUT FIT 2024
+ **/
+
 package consumers;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -20,7 +24,11 @@ import static org.apache.flink.table.api.Expressions.call;
 public class LocationsTableFactory implements TableFactory<DataStream<JsonNode>,JsonNode>, Serializable {
 
     /** Creates table from json stream of data and adds processing time timestamps (watermarks)
-     * Based on: https://github.com/apache/sedona/blob/master/examples/flink-sql/src/main/java/Utils.java#L71/
+     *
+     *  Modified from Apache Sedona originally licensed under Apache License 2.0
+     * 
+     *  See the NOTICE-sedona and LICENSE-2.0 files at the CollisionTracker/license for additional attributions.
+     *  Based on: https://github.com/apache/sedona/blob/master/examples/flink-sql/src/main/java/Utils.java#L100/
      * */
     @Override
     public Table createTable(StreamTableEnvironment tableEnv, DataStream<JsonNode> data, String[] colNames) {

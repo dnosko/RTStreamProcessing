@@ -1,7 +1,7 @@
-from pydantic import BaseModel
-from typing import Tuple
+# Daša Nosková - xnosko05
+# VUT FIT 2024
 
-from sqlalchemy import DateTime
+from pydantic import BaseModel
 
 
 class Point(BaseModel):

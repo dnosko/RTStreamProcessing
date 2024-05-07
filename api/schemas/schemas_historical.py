@@ -1,3 +1,6 @@
+# Daša Nosková - xnosko05
+# VUT FIT 2024
+
 from datetime import datetime
 from typing import List
 

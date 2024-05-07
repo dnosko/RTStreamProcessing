@@ -1,7 +1,9 @@
+# Daša Nosková - xnosko05
+# VUT FIT 2024
+
 from Generator import Generator
 
 import gzip
-import json
 
 import argparse
 import asyncio

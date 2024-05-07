@@ -1,3 +1,6 @@
+# Daša Nosková - xnosko05
+# VUT FIT 2024
+
 from contextlib import asynccontextmanager
 import sys
 import sqlalchemy as db

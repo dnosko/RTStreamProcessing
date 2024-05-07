@@ -1,3 +1,6 @@
+/** Daša Nosková - xnosko05
+ *  VUT FIT 2024
+ **/
 package consumers;
 
 public class PolygonExitEvent extends PolygonOutputEvent{

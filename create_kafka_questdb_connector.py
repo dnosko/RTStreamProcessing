@@ -1,3 +1,5 @@
+# Daša Nosková
+# VUT FIT 2024
 from time import sleep
 
 import requests

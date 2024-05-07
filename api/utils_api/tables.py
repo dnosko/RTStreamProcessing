@@ -1,3 +1,6 @@
+# Daša Nosková - xnosko05
+# VUT FIT 2024
+
 from sqlalchemy import String, DateTime, Boolean, ForeignKey, Table, Column, Integer, MetaData
 
 metadata = MetaData()

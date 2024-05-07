@@ -1,3 +1,6 @@
+# Daša Nosková - xnosko05
+# VUT FIT 2024
+
 from contextlib import asynccontextmanager
 import sys
 from datetime import datetime
@@ -138,7 +141,6 @@ def currently_in_polygon(polygons: Optional[List[int]] = Query(None, title="Poly
 
     mapping = map_user_to_device(users_devices)  # map the user id to device id
     query_filter = {"inside": True}
-    # query = f"SELECT device, polygon, collision_date_in FROM collisions_table where inside = true;"
 
     if polygons:  # create select query with specified polygons
         query_filter["polygon"] = {"$in": polygons}

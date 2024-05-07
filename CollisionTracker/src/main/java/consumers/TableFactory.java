@@ -1,3 +1,7 @@
+/** Daša Nosková - xnosko05
+ *  VUT FIT 2024
+ **/
+
 package consumers;
 
 import org.apache.flink.table.api.Table;

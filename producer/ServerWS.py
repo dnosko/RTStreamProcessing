@@ -1,3 +1,6 @@
+# Daša Nosková - xnosko05
+# VUT FIT 2024
+
 import asyncio
 import websockets
 from KafkaProducer import KafkaProducer

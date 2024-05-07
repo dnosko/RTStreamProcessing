@@ -1,4 +1,9 @@
-// adapted from: https://developer.confluent.io/get-started/java/#build-consumer
+/** Daša Nosková - xnosko05
+ *  VUT FIT 2024
+ * Body of consumer adapted from: https://developer.confluent.io/get-started/java/#build-consumer
+ */
+
+
 package consumers;
 
 import org.apache.kafka.clients.consumer.*;

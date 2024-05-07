@@ -1,3 +1,6 @@
+# Daša Nosková - xnosko05
+# VUT FIT 2024
+
 import redis.exceptions
 from sqlalchemy import exc, select
 from .tables import users, polygons, polygons_category
