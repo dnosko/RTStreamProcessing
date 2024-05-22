@@ -2,7 +2,7 @@
 ## Master's Thesis - Brno University Of Technology 2023/2024
 Work was focused on designing a system for processing a large stream of geo-localized
 temporal data in real-time. System was designed on principles of microservices and utilizes message queues and technologies
-emphasizing fast response times. 
+emphasizing fast response times. System is designed to be run locally, but there's possibility to run the whole system or only certain services (e.g. Kafka) in cloud environment also. 
 
 ### Technologies used:
 Apache Flink \
