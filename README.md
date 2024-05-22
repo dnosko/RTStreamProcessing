@@ -44,3 +44,9 @@ Kafka UI: http://localhost:8080/
 ## Architecture of the system:
 ![MicroServices-Copy of collisions s MQ drawio](https://github.com/dnosko/RTStreamProcessing/assets/55986283/945f65b1-eae0-478d-905e-f222ffda41f5)
 
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for more details.
+
+Part of the service CollisionTracker/ is licensed under the Apache License 2.0. See the license/ directory for more details.
+
